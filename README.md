@@ -1,10 +1,14 @@
 # git-download
 
 ```bash
-git-download [https://github.com/]<user>/<repo>[/<branch>|<sha1>] [<path>] [-o <target> --force --rm-rf]
+git-download
+    [https://github.com/]<user>/<repo>
+    [<branch>|<sha1>]
+    [-o <target> [-f|--force] [-F|--rm-rf]]
+    [-r|--recursive] [--] [<path>]
 ```
 
-Supports all POSIX-compliant shell _and PowerShell TODO_.
+Supports bash _and PowerShell TODO_.
 
 ## Install
 
