@@ -4,7 +4,7 @@ usage()
 {
     cat - <<EOF
 git-download
-    [https://github.com/]<user>/<repo>
+    [git@github.com:]<user>/<repo>
     [<branch>|<sha1>]
     [-o <target> [-f|--force] [-F|--rm-rf]]
     [--[no-]legacy]
