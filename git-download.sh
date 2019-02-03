@@ -15,7 +15,7 @@ EOF
 POSITIONAL=()
 while [ $# -gt 0 ]; do
     key="$1"
-    case $key in
+    case "$key" in
         -h|--help)
             usage
             exit
@@ -106,7 +106,7 @@ fi
 
 WORK_DIR=$(mktemp -d)
 REPO_DIR="$WORK_DIR/.git"
-trap "{ rm -rf "$WORK_DIR"; }" EXIT
+# trap "{ rm -rf "$WORK_DIR"; }" EXIT
 
 git init "$WORK_DIR"
 git --git-dir="$REPO_DIR" remote add origin "$REPO"
@@ -170,11 +170,95 @@ fi
 
 LEGACY=YES # TODO
 
+WALKER_REPO=
+WALKER_RESULT=
+WALKER_TYPE=
+WALKER_MODE=
+walker()
+{
+    # $1 = worktree
+    # $2 = base sha1
+    # $3 = sha1
+    # $4 = target path
+
+    # if [ -z "$2" ]; then
+    #     TYPE=$(git --git-dir="$REPO_DIR" cat-file -t "$1")
+    #     if [ $? -ne 0 ]; then
+    #         exit 4
+    #     fi
+    #     if [ "$TYPE" = "commit" ]; then
+    #         exit 233 # TODO
+    #     fi
+    #     echo "$TYPE"
+    #     return
+    # fi
+
+    W_REPO=$1.git
+    W_WORK=$1
+    W_BSHA=$2
+    W_SHA1=$3
+    W_TARG=$4
+    echo in walker "$1" "$2" "$3" "$4"
+    FIRST=$(echo "$W_TARG" | sed -E 's_^([^/]*)(/.*)?$_\1_')
+    REST=$(echo "$W_TARG" | sed -E 's_^[^/]*(/(.*))?$_\2_')
+    LSTREE="$(git --git-dir="$W_REPO" ls-tree "$W_SHA1" -- "$FIRST")"
+    if [ $? -ne 0 ]; then
+        exit 4
+    fi
+    set -- $LSTREE
+    TYPE=$2
+    WN_SHA1=$3
+    if [ "$TYPE" = "commit" ]; then
+        git --git-dir="$W_REPO" cat-file blob "$W_BSHA:.gitmodule" > "$WORK_DIR/walker_temp"
+        if [ $? -ne 0 ]; then
+            echo "Can't clone submodule: .gitmodule not found"
+            exit 190
+        fi
+        ID=$(grep -nF "$WN_SHA1" "$WORK_DIR/walker_temp" | cut -f1 -d:)
+        if [ -z "$ID" ]; then
+            echo "Can't clone submodule: submodule not found"
+            exit 191
+        fi
+        URL=$(awk "FNR == $ID { print \$1; }" "$WORK_DIR/walker_temp")
+        if [ ! "$URL" = "URL" ]; then
+            echo "Can't clone submodule: url not found"
+            exit 192
+        fi
+        URL=$(awk "FNR == $ID { print \$3; }" "$WORK_DIR/walker_temp")
+        # TODO
+    elif [ "$TYPE" = "tree" ]; then
+        if [ -z $REST ]; then
+            WALKER_REPO="$W_REPO"
+            WALKER_RESULT="$WN_SHA1"
+            WALKER_TYPE="tree"
+            WALKER_MODE=
+            # TODO
+        else
+            walker "$W_WORK" "$W_BSHA" "$WN_SHA1" "$REST"
+        fi
+    elif [ "$TYPE" = "blob" ]; then
+        if [ -z $REST ]; then
+            WALKER_REPO="$W_REPO"
+            WALKER_RESULT="$WN_SHA1"
+            WALKER_TYPE="blob"
+            WALKER_MODE="$1"
+        else
+            echo "$W_SHA1/$FIRST is a file, you can't walk into it"
+            exit 17
+        fi
+    else
+        echo "Type $TYPE not supported"
+        exit 20
+    fi
+}
+
 if [ ! -z "$LEGACY" ]; then
     git --git-dir="$REPO_DIR" fetch-pack --depth=1 "$REPO" "$SHA1"
     if [ $? -ne 0 ]; then
         exit 2
     fi
+
+    echo "walker: $(walker "$SHA1" "." "$DIR")"
 
     if [ -z "$DIR" ]; then
         TYPE=tree
