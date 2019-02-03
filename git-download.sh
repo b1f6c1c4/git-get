@@ -175,15 +175,24 @@ fi
 
 LEGACY=YES # TODO
 
-fetcher()
+git-download-fetcher()
 {
-    # $1 = worktree
-    # $2 = remote repo
-    # $3 = sha1
+    # $1 = verbose
+    # $2 = legacy
+    # $3 = quiet
+    # $4 = worktree
+    # $5 = remote repo
+    # $6 = sha1
 
+    VREBOSE="$1"
+    shift
     if [ ! -z "$VERBOSE" ]; then
         echo "Fetcher:" "$@"
     fi
+    LEGACY="$1"
+    shift
+    QUIET="$1"
+    shift
     F_REPO="$1/.git"
     F_WORK="$1"
     shift
@@ -215,12 +224,15 @@ fetcher()
         exit 233 # TODO
     fi
 }
+export -f git-download-fetcher
 
 WALKER_REPO=
 WALKER_WORK=
 WALKER_RESULT=
 WALKER_TYPE=
 WALKER_MODE=
+WALKER_BSHA=
+WALKER_PATH=
 walker()
 {
     # $1 = worktree
@@ -228,18 +240,6 @@ walker()
     # $3 = path
     # $4 = sha1
     # $5 = target path
-
-    # if [ -z "$2" ]; then
-    #     TYPE=$(git --git-dir="$REPO_DIR" cat-file -t "$1")
-    #     if [ $? -ne 0 ]; then
-    #         exit 4
-    #     fi
-    #     if [ "$TYPE" = "commit" ]; then
-    #         exit 233 # TODO
-    #     fi
-    #     echo "$TYPE"
-    #     return
-    # fi
 
     if [ ! -z "$VERBOSE" ]; then
         echo "Walker:" "$@"
@@ -262,7 +262,11 @@ walker()
     else
         WN_PATH="$W_PATH/$FIRST"
     fi
-    LSTREE="$(git --git-dir="$W_REPO" ls-tree "$W_SHA1" -- "$FIRST")"
+    if [ -z "$W_TARG" ]; then
+        LSTREE="040000 tree $W_SHA1 "
+    else
+        LSTREE="$(git --git-dir="$W_REPO" ls-tree "$W_SHA1" -- "$FIRST")"
+    fi
     if [ $? -ne 0 ]; then
         exit 4
     fi
@@ -272,12 +276,12 @@ walker()
     if [ "$TYPE" = "commit" ]; then
         WN_WORK="$W_WORK/$WN_PATH"
         git --git-dir="$W_REPO" cat-file blob "$W_BSHA:.gitmodules" > "$W_WORK/.gitmodules"
-        git config --file="$W_WORK/.gitmodules" --get-regexp 'submodule\..*\.path' > "$WORK_DIR/walker_temp"
+        git config --file="$W_WORK/.gitmodules" --get-regexp 'submodule\..*\.path' > "$W_WORK/walker_temp"
         if [ $? -ne 0 ]; then
             echo "Can't clone submodule: .gitmodules not found"
             exit 190
         fi
-        NM=$(grep -F ".path $WN_PATH" "$WORK_DIR/walker_temp")
+        NM=$(grep -F ".path $WN_PATH" "$W_WORK/walker_temp")
         if [ -z "$NM" ]; then
             echo "Can't clone submodule: submodules not found"
             exit 191
@@ -287,7 +291,7 @@ walker()
         if [ ! -z "$VERBOSE" ]; then
             echo "Submodule found:" "$NMX" "$URL"
         fi
-        fetcher "$WN_WORK" "$URL" "$WN_SHA1"
+        git-download-fetcher "$VERBOSE" "$LEGACY" "$QUIET" "$WN_WORK" "$URL" "$WN_SHA1"
         WN_SHA1=$(git --git-dir="$WN_WORK/.git" rev-parse "$WN_SHA1^{tree}")
         if [ $? -ne 0 ]; then
             echo "Can't find tree from commit"
@@ -298,6 +302,8 @@ walker()
             WALKER_RESULT="$WN_SHA1"
             WALKER_TYPE="tree"
             WALKER_MODE=
+            WALKER_BSHA="$WN_SHA1"
+            WALKER_PATH="$WN_PATH"
             if [ ! -z "$VERBOSE" ]; then
                 echo "Walker suceed:" "$WALKER_WORK" "$WALKER_RESULT" "$WALKER_TYPE" "$WALKER_MODE"
             fi
@@ -310,6 +316,8 @@ walker()
             WALKER_RESULT="$WN_SHA1"
             WALKER_TYPE="tree"
             WALKER_MODE=
+            WALKER_BSHA="$W_BSHA"
+            WALKER_PATH="$W_PATH"
             if [ ! -z "$VERBOSE" ]; then
                 echo "Walker suceed:" "$WALKER_WORK" "$WALKER_RESULT" "$WALKER_TYPE" "$WALKER_MODE"
             fi
@@ -322,6 +330,8 @@ walker()
             WALKER_RESULT="$WN_SHA1"
             WALKER_TYPE="blob"
             WALKER_MODE="$1"
+            WALKER_BSHA="$W_BSHA"
+            WALKER_PATH="$W_PATH"
             if [ ! -z "$VERBOSE" ]; then
                 echo "Walker suceed:" "$WALKER_WORK" "$WALKER_RESULT" "$WALKER_TYPE" "$WALKER_MODE"
             fi
@@ -336,26 +346,124 @@ walker()
     WALKER_REPO="$WALKER_WORK/.git"
 }
 
-recurse()
+git-download-recurse()
 {
+    # $1: verbose
+    # $2: legacy
+    # $3: quiet
+    # $4: work
+    # $5: base sha1
+    # $6: path
+    # $7: target
+    # $8: mode
+    # $9: type
+    # $a: sha1
+    # $b...: path
+
+    VERBOSE="$1"
+    shift
     if [ ! -z "$VERBOSE" ]; then
         echo "Recurse:" "$@"
     fi
+    LEGACY="$1"
+    shift
+    QUIET="$1"
+    shift
+    R_REPO="$1/.git"
+    R_WORK="$1"
+    shift
+    R_BSHA="$1"
+    shift
+    R_PATH="$1"
+    shift
+    R_TARGET="$1"
+    shift
+
+    if [ -z "$*" ]; then
+        return
+    fi
+
+    set -- $*
+    R_MODE="$1"
+    shift
+    R_TYPE="$1"
+    shift
+    R_SHA1="$1"
+    shift
+    R_NEXT="$*"
+    if [ -z "$R_PATH" ]; then
+        RN_PATH="$R_NEXT"
+    else
+        RN_PATH="$R_PATH/$R_NEXT"
+    fi
+    if [ "$R_TYPE" = "tree" ]; then
+        git --git-dir="$R_REPO" ls-tree "$R_SHA1" | grep -v '^100... blob ' | xargs -l bash -c 'git-download-recurse "$@"' "$@" "$VERBOSE" "$LEGACY" "$QUIET" "$R_WORK" "$R_BSHA" "$R_PATH" "$R_TARGET/$R_NEXT"
+    elif [ "$R_TYPE" = "commit" ]; then
+        RN_WORK="$R_WORK/$R_NEXT"
+        RN_TARGET="$R_TARGET/$R_NEXT"
+        git --git-dir="$R_REPO" cat-file blob "$R_BSHA:.gitmodules" > "$R_WORK/.gitmodules"
+        git config --file="$R_WORK/.gitmodules" --get-regexp 'submodule\..*\.path' > "$R_WORK/walker_temp"
+        if [ $? -ne 0 ]; then
+            echo "Can't clone submodule: .gitmodules not found"
+            exit 290
+        fi
+        NM=$(grep -F ".path $RN_PATH" "$R_WORK/walker_temp")
+        if [ -z "$NM" ]; then
+            echo "Can't clone submodule: submodules not found"
+            exit 291
+        fi
+        NMX=$(echo "$NM" | cut -f2 -d.)
+        URL=$(git config --file="$R_WORK/.gitmodules" --get "submodule.$NMX.url")
+        if [ ! -z "$VERBOSE" ]; then
+            echo "Submodule found:" "$NMX" "$URL"
+        fi
+        git-download-fetcher "$VERBOSE" "$LEGACY" "$QUIET" "$RN_WORK" "$URL" "$R_SHA1"
+        RN_SHA1=$(git --git-dir="$RN_WORK/.git" rev-parse "$R_SHA1^{tree}")
+        if [ $? -ne 0 ]; then
+            echo "Can't find tree from commit"
+            exit 292
+        fi
+        rm -fd "$RN_TARGET"
+        if [ $? -ne 0 ]; then
+            echo "Can't remove the empty folder"
+            exit 293
+        fi
+        git-download-exporter "$VERBOSE" "$LEGACY" "$QUIET" "YES" "$RN_WORK" "$RN_SHA1" "" "$RN_SHA1" "$RN_TARGET"
+    else
+        echo "Warning: type $R_TYPE not supported"
+    fi
 }
+export -f git-download-recurse
 
-exporter()
+git-download-exporter()
 {
-    # $1: repo
-    # $2: work
-    # $3: sha1
-    # $4: target
+    # $1: verbose
+    # $2: legacy
+    # $3: quiet
+    # $4: recursive
+    # $5: work
+    # $6: base sha1
+    # $7: path
+    # $8: sha1
+    # $9: target
 
+    VREBOSE="$1"
+    shift
     if [ ! -z "$VERBOSE" ]; then
         echo "Exporter:" "$@"
     fi
-    E_REPO="$1"
+    LEGACY="$1"
+    shift
+    QUIET="$1"
+    shift
+    RECURSIVE="$1"
     shift
     E_WORK="$1"
+    E_REPO="$1/.git"
+    shift
+    E_BSHA="$1"
+    shift
+    E_PATH="$1"
     shift
     E_RESULT="$1"
     shift
@@ -368,31 +476,32 @@ exporter()
             rm -rf "$E_OUTPUT"
         else
             echo "Output path is a folder and you try to replace it with a folder; use --rm-rf if that's what you want."
-            exit 3
+            exit 23
         fi
     elif [ -f "$OUTPUT" ]; then
         if [ ! -z "$FORCE" ]; then
             rm -f "$E_OUTPUT"
         else
             echo "Output path is a file and you try to replace it with a folder; use --force if that's what you want."
-            exit 3
+            exit 23
         fi
     fi
     git --git-dir="$E_REPO" --work-tree="$E_WORK" checkout-index -f --prefix="result/" -a
     if [ $? -ne 0 ]; then
-        exit 4
+        exit 24
     fi
     mv "$E_WORK/result" "$E_OUTPUT"
     if [ $? -ne 0 ]; then
-        exit 6
+        exit 26
     fi
     if [ ! -z "$RECURSIVE" ]; then
-        git --git=dir="$E_REPO" ls-tree "$E_RESULT" | grep '^160000 commit ' | xargs -n 1 recurse "$E_WORK" "$E_OUTPUT"
+        git --git-dir="$E_REPO" ls-tree "$E_RESULT" | grep -v '^100... blob ' | xargs -l bash -c 'git-download-recurse "$@"' "$0" "$VERBOSE" "$LEGACY" "$QUIET" "$E_WORK" "$E_BSHA" "$E_PATH" "$E_OUTPUT"
     fi
 }
+export -f git-download-exporter
 
 if [ ! -z "$LEGACY" ]; then
-    fetcher "$WORK_DIR" "$REPO" "$SHA1"
+    git-download-fetcher "$VERBOSE" "$LEGACY" "$QUIET" "$WORK_DIR" "$REPO" "$SHA1"
     walker "$WORK_DIR" "$SHA1" "" "$SHA1" "$DIR"
 
     if [ ! -z "$VERBOSE" ]; then
@@ -400,26 +509,26 @@ if [ ! -z "$LEGACY" ]; then
     fi
 
     if [ "$WALKER_TYPE" = "tree" ]; then
-        exporter "$WALKER_REPO" "$WALKER_WORK" "$WALKER_RESULT" "$OUTPUT"
+        git-download-exporter "$VERBOSE" "$LEGACY" "$QUIET" "$RECURSIVE" "$WALKER_WORK" "$WALKER_BSHA" "$WALKER_PATH" "$WALKER_RESULT" "$OUTPUT"
     elif [ "$WALKER_TYPE" = "blob" ]; then
         if [ -d "$OUTPUT" ]; then
             if [ ! -z "$FORCE_DIR" ]; then
                 rm -rf "$OUTPUT"
             else
                 echo "Output path is a folder and you try to replace it with a file; use --rm-rf if that's what you want."
-                exit 3
+                exit 23
             fi
         elif [ -f "$OUTPUT" ]; then
             if [ ! -z "$FORCE" ]; then
                 rm -f "$OUTPUT"
             else
                 echo "Output path is a file and you try to replace it with a file; use --force if that's what you want."
-                exit 3
+                exit 23
             fi
         fi
         git --git-dir="$WALKER_REPO" cat-file blob "$WALKER_RESULT" > "$WALKER_WORK/result"
         if [ $? -ne 0 ]; then
-            exit 4
+            exit 24
         fi
         if [ "$WALKER_MODE" = "100644" ]; then
             chmod 644 "$WALKER_WORK/result"
@@ -429,11 +538,11 @@ if [ ! -z "$LEGACY" ]; then
             echo "Warning: mode not supported: $WALKER_MODE"
         fi
         if [ $? -ne 0 ]; then
-            exit 4
+            exit 25
         fi
         mv "$WALKER_WORK/result" "$OUTPUT"
         if [ $? -ne 0 ]; then
-            exit 4
+            exit 26
         fi
     fi
 fi
