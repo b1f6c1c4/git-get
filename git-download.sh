@@ -7,6 +7,7 @@ git-download
     [https://github.com/]<user>/<repo>
     [<branch>|<sha1>]
     [-o <target> [-f|--force] [-F|--rm-rf]]
+    [--[no-]legacy]
     [-r|--recursive] [--] [<path>]
 EOF
 }
@@ -38,6 +39,14 @@ while [ $# -gt 0 ]; do
         -o|--output)
             OUTPUT="$2"
             shift
+            shift
+            ;;
+        --legacy)
+            LEGACY=YES
+            shift
+            ;;
+        --no-legacy)
+            LEGACY=NO
             shift
             ;;
         --)
@@ -89,11 +98,21 @@ if [ -z "$BRANCH" ] && [ -z "$MAYBE_BRANCH" ]; then
     BRANCH="HEAD"
 fi
 
-REPO_DIR=$(mktemp -d)
-trap "{ rm -rf "$REPO_DIR"; }" EXIT
+which git >/dev/null
+if [ $? -ne 0 ]; then
+    echo "Git not found"
+    exit 66
+fi
 
-git init --bare "$REPO_DIR"
+WORK_DIR=$(mktemp -d)
+REPO_DIR="$WORK_DIR/.git"
+trap "{ rm -rf "$WORK_DIR"; }" EXIT
+
+git init "$WORK_DIR"
 git --git-dir="$REPO_DIR" remote add origin "$REPO"
+if [ ! -z "$VERBOSE" ]; then
+    echo "Remote:" "$REPO"
+fi
 
 if [ ! -z $MAYBE_BRANCH ]; then
     SHA1=$(git --git-dir="$REPO_DIR" ls-remote origin $MAYBE_BRANCH)
@@ -118,11 +137,40 @@ if [ ! -z "$VERBOSE" ]; then
     echo "Retrived SHA1:" $SHA1
 fi
 
+if [ -z "$OUTPUT" ]; then
+    OUTPUT="./"
+fi
+IS_FINAL=$(echo "$OUTPUT" | grep '/$')
+if [ ! -z "$IS_FINAL" ]; then
+    if [ -z "$DIR" ]; then
+        OUTPUT="$OUTPUT$(basename "$REPO")"
+    else
+        OUTPUT="$OUTPUT$(basename "$DIR")"
+    fi
+fi
+
+if [ ! -z "$VERBOSE" ]; then
+    echo "Output directory:" "$OUTPUT"
+fi
+
 GIT_VERSION=$(git --version | grep -P '^git version (2\.1[8-9]|2\.[2-9][0-9]|2\.[0-9][0-9][0-9]+|[3-9]\.[0-9]+|[1-9][0-9]+\.[0-9]+)(\.[0-9]+)?$')
 if [ -z "$GIT_VERSION" ]; then
-    echo "\e[31m$GIT_VERSION is too old, please use 2.18+\e[0m"
+    echo "[31m$(git --version) is too old, please use 2.18+[0m"
+    if [ "$LEGACY" = "NO" ]; then
+        exit 18
+    fi
     echo "fallback to legacy mode"
+    LEGACY=YES
+fi
+if [ "$LEGACY" = "NO" ]; then
+    echo "Unfortunately, this feature has not been implemented."
+    exit 233 # TODO
+    LEGACY=
+fi
 
+LEGACY=YES # TODO
+
+if [ ! -z "$LEGACY" ]; then
     git --git-dir="$REPO_DIR" fetch-pack --depth=1 "$REPO" "$SHA1"
     if [ $? -ne 0 ]; then
         exit 2
@@ -131,9 +179,18 @@ if [ -z "$GIT_VERSION" ]; then
     if [ -z "$DIR" ]; then
         TYPE=tree
     else
-        TYPE=$(git --git-dir="$REPO_DIR" cat-file -t "$SHA1$DIR")
+        TYPE=$(git --git-dir="$REPO_DIR" cat-file -t "$SHA1:$DIR")
+        if [ $? -ne 0 ]; then
+            exit 4
+        fi
     fi
-    if [ "$TYPE" -eq "tree" ]; then
+    if [ ! -z "$VERBOSE" ]; then
+        echo "Type:" $TYPE
+    fi
+
+    git --git-dir="$REPO_DIR" --work-tree="$WORK_DIR" read-tree "$SHA1"
+
+    if [ "$TYPE" = "tree" ]; then
         if [ -d "$OUTPUT" ]; then
             if [ ! -z "$FORCE_DIR" ]; then
                 rm -rf "$OUTPUT"
@@ -150,14 +207,18 @@ if [ -z "$GIT_VERSION" ]; then
             fi
         fi
         if [ -z "$DIR" ]; then
-            git --git-dir="$REPO_DIR" checkout-index -f --prefix="$OUTPUT/" -- "$DIR"
+            git --git-dir="$REPO_DIR" --work-tree="$WORK_DIR" checkout-index -f --prefix="result/" -- "$DIR"
         else
-            git --git-dir="$REPO_DIR" checkout-index -f --prefix="$OUTPUT/" -a
+            git --git-dir="$REPO_DIR" --work-tree="$WORK_DIR" checkout-index -f --prefix="result/" -a
         fi
         if [ $? -ne 0 ]; then
             exit 4
         fi
-    elif [ "$TYPE" -eq "blob" ]; then
+        mv "$WORK_DIR/result/$DIR" "$OUTPUT"
+        if [ $? -ne 0 ]; then
+            exit 6
+        fi
+    elif [ "$TYPE" = "blob" ]; then
         if [ -d "$OUTPUT" ]; then
             if [ ! -z "$FORCE_DIR" ]; then
                 rm -rf "$OUTPUT"
@@ -173,11 +234,15 @@ if [ -z "$GIT_VERSION" ]; then
                 exit 3
             fi
         fi
-        git --git-dir="$REPO_DIR" checkout-index -f --prefix="$OUTPUT" -- "$DIR"
+        git --git-dir="$REPO_DIR" --work-tree="$WORK_DIR" checkout-index -f --prefix="result/" -- "$DIR"
         if [ $? -ne 0 ]; then
             exit 4
         fi
-    elif [ "$TYPE" -eq "commit" ]; then
+        mv "$WORK_DIR/result/$DIR" "$OUTPUT"
+        if [ $? -ne 0 ]; then
+            exit 4
+        fi
+    elif [ "$TYPE" = "commit" ]; then
         echo "TODO: recursive"
         exit 255
     fi
