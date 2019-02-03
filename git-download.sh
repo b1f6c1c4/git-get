@@ -8,7 +8,7 @@ git-download
     [<branch>|<sha1>]
     [-o <target> [-f|--force] [-F|--rm-rf]]
     [--[no-]legacy]
-    [-r|--recursive] [--] [<path>]
+    [--] [<path>]
 EOF
 }
 
@@ -22,10 +22,6 @@ while [ $# -gt 0 ]; do
             ;;
         -v|--verbose)
             VERBOSE=YES
-            shift
-            ;;
-        -r|--recursive)
-            RECURSIVE=YES
             shift
             ;;
         -f|--force)
