@@ -4,6 +4,7 @@ usage()
 {
     cat - <<EOF
 git-download
+    [-v|--verbose|-q|--quiet]
     [https://github.com/]<user>/<repo>
     [<branch>|<sha1>]
     [-o <target> [-f|--force] [-F|--rm-rf]]
@@ -19,6 +20,10 @@ while [ $# -gt 0 ]; do
         -h|--help)
             usage
             exit
+            ;;
+        -q|--quiet)
+            QUIET=--quiet
+            shift
             ;;
         -v|--verbose)
             VERBOSE=YES
@@ -108,7 +113,7 @@ WORK_DIR=$(mktemp -d)
 REPO_DIR="$WORK_DIR/.git"
 # trap "{ rm -rf "$WORK_DIR"; }" EXIT
 
-git init "$WORK_DIR"
+git init $QUIET "$WORK_DIR"
 git --git-dir="$REPO_DIR" remote add origin "$REPO"
 if [ ! -z "$VERBOSE" ]; then
     echo "Remote:" "$REPO"
@@ -195,9 +200,13 @@ fetcher()
     if [ ! -z "$LEGACY" ]; then
         if [ ! -d "$F_REPO" ]; then
             mkdir -p "$F_WORK"
-            git init "$F_WORK"
+            git init $QUIET "$F_WORK"
         fi
-        git --git-dir="$F_REPO" fetch-pack --depth=1 "$REMO_GIT" "$F_SHA1"
+        if [ -z "$QUIET" ]; then
+            git --git-dir="$F_REPO" fetch-pack --depth=1 "$REMO_GIT" "$F_SHA1"
+        else
+            git --git-dir="$F_REPO" fetch-pack --quiet --no-progress --depth=1 "$REMO_GIT" "$F_SHA1" > /dev/null
+        fi
         if [ $? -ne 0 ]; then
             exit 2
         fi
