@@ -7,7 +7,8 @@ but unfortunately it's full of bullshit now.
 
 ```bash
 git-download
-    [git@github.com:]<user>/<repo>
+    [-v|--verbose|-q|--quiet]
+    [https://github.com/]<user>/<repo>
     [<branch>|<sha1>]
     [-o <target> [-f|--force] [-F|--rm-rf]]
     [-r|--recursive] [--] [<path>]
