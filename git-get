@@ -7,12 +7,12 @@ usage()
     cat - <<EOF
 git-get
     [-v|--verbose|-q|--quiet]
-    [https://github.com/|git@github.com:]<user>/<repo>
+    <url> | <user>/<repo>
     [<branch>|<sha1>]
-    [-o <target> [-f|--force] [-F|--rm-rf]]
+    [-o <target>] [-f|--force] [-F|--rm-rf]
     [-t [--tag-file=VERSION]]
     [--token <token> | --token-file <file>]
-    [-r|--recursive] [-j<N>] [--] [<path>]
+    [-r|--recursive] [-j<N>] [-- <path>]
 EOF
 }
 
@@ -21,6 +21,14 @@ git_new() {
     [[ "$V" =~ ^git[[:space:]]version[[:space:]]2\..\. ]] && return 1
     [[ "$V" =~ ^git[[:space:]]version[[:space:]]2\.1.\. ]] && return 1
     return 0
+}
+
+fakerealpath() {
+    if [[ "$1" =~ ^/ ]]; then
+        printf '%s' "$1"
+    else
+        printf '%s/%s' "$PWD" "$1"
+    fi
 }
 
 TOKEN=
@@ -34,6 +42,7 @@ OUTPUT=
 TAG=
 TAG_FILE=
 JOBS=1
+DIR=
 POSITIONAL=()
 while [ $# -gt 0 ]; do
     key="$1"
@@ -99,6 +108,8 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --)
+            DIR="$2"
+            shift
             shift
             break
             ;;
@@ -114,14 +125,20 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-PATH_POSITIONAL=()
-while [ $# -gt 0 ]; do
-    PATH_POSITIONAL+=("$1")
-    shift
-done
+if [ "$#" -gt 0 ]; then
+    echo "Error: Only one path allowed!" >&2
+    exit 1
+fi
 
 if [ "${#POSITIONAL[@]}" -eq 0 ]; then
-    echo "Error: Must specify <repo-url> or <user>/<repo>"
+    echo "Error: Must specify <repo-url> (any git remote) or <user>/<repo> (GitHub)"
+    exit 1
+elif [ "${#POSITIONAL[@]}" -eq 1 ]; then
+    BRANCH="HEAD"
+elif [ "${#POSITIONAL[@]}" -eq 2 ]; then
+    BRANCH="${POSITIONAL[1]}"
+else
+    echo "Error: Too many positional arguments, maybe you forgot -- before <path>?" >&2
     exit 1
 fi
 
@@ -143,38 +160,14 @@ else
     REPO="git@github.com:${POSITIONAL[0]}.git"
 fi
 
+if [ ! -z "$DIR" ]; then
+    BASENAME="$(basename "$DIR")"
+else
+    BASENAME="$(basename "$REPO")"
+    BASENAME="${BASENAME%.git}"
+fi
 if [ -z "$OUTPUT" ]; then
-    if [ ! -z "$GITHUB" ]; then
-        OUTPUT="${GH_REPO#*/}"
-    else
-        OUTPUT="${REPO##*/}"
-        OUTPUT="${OUTPUT%.git}"
-    fi
-fi
-
-total="$((${#POSITIONAL[@]} + ${#PATH_POSITIONAL[@]}))"
-if [ "$total" -gt 3 ] || [ "${#PATH_POSITIONAL[@]}" -gt 1 ]; then
-    echo "Error: Too many positional arguments" >&2
-    exit 1
-fi
-
-BRANCH=
-BRANCH_OR_DIR=
-DIR=
-if [ "${#PATH_POSITIONAL[@]}" -eq 1 ]; then
-    BRANCH="${POSITIONAL[1]}"
-    DIR="${PATH_POSITIONAL[0]}"
-elif [ "${#POSITIONAL[@]}" -eq 1 ]; then
-    BRANCH="HEAD"
-elif [ "${#POSITIONAL[@]}" -eq 2 ]; then
-    if [ ! -z "$(echo "${POSITIONAL[1]}" | grep -P "^[0-9a-fA-F]{7,40}$")" ]; then
-        BRANCH="${POSITIONAL[1]}"
-    else
-        BRANCH_OR_DIR="${POSITIONAL[1]}"
-    fi
-elif [ "${#POSITIONAL[@]}" -eq 3 ]; then
-    BRANCH="${POSITIONAL[1]}"
-    DIR="${POSITIONAL[2]}"
+    OUTPUT="$BASENAME"
 fi
 
 if [ ! -z "$TAG" ]; then
@@ -201,7 +194,7 @@ if [ ! -z "$FORCE_DIR" ]; then
     FORCE=YES
 fi
 if [ ! "$OUTPUT" = '-' ]; then
-    OUTPUT="$(realpath "$OUTPUT")"
+    OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
 if [ ! -z "$VERBOSE" ]; then
     if [ ! -z "$TOKEN" ]; then
@@ -218,45 +211,12 @@ if [ ! -z "$VERBOSE" ]; then
     printf 'REPO=%q\n' "$REPO" >&2
     printf 'RECURSIVE=%q\n' "$RECURSIVE" >&2
     printf 'JOBS=%q\n' "$JOBS" >&2
-    # printf 'BRANCH=%q\n' "$BRANCH" >&2
-    # printf 'BRANCH_OR_DIR=%q\n' "$BRANCH_OR_DIR" >&2
-    # printf 'DIR=%q\n' "$DIR" >&2
-fi
-
-[ ! -z "$RECURSIVE" ] && echo 'Error: Not yet supported.' >&2 && exit 114
-
-if [ ! -z "$BRANCH_OR_DIR" ]; then
-    SHA1="$(git ls-remote "$REPO" "$BRANCH_OR_DIR")"
-    if [ -z "$SHA1" ]; then
-        BRANCH="HEAD"
-        DIR="$BRANCH_OR_DIR"
-        SHA1="$(git ls-remote "$REPO" "$BRANCH")"
-    else
-        BRANCH="$BRANCH_OR_DIR"
-    fi
-else
-    SHA1="$(git ls-remote "$REPO" "$BRANCH")"
-fi
-
-if [ ! -z "$SHA1" ]; then
-    P=$'\t*'
-    SHA1="${SHA1%%$P}"
-else
-    SHA1="$BRANCH"
-fi
-
-if [ ! -z "$DIR" ]; then
-    BASENAME="$(basename "$DIR")"
-else
-    BASENAME="$(basename "$REPO")"
-    BASENAME="${BASENAME%.git}"
-fi
-if [ ! -z "$VERBOSE" ]; then
     printf 'BRANCH=%q\n' "$BRANCH" >&2
-    printf 'SHA1=%q\n' "$SHA1" >&2
     printf 'DIR=%q\n' "$DIR" >&2
     printf 'BASENAME=%q\n' "$BASENAME" >&2
 fi
+
+[ ! -z "$RECURSIVE" ] && echo 'Error: Not yet supported.' >&2 && exit 114
 
 WORK_DIR="$(mktemp -d)"
 finish() {
@@ -295,7 +255,7 @@ got_dir() {
     elif [ -d "$OUTPUT" ]; then
         if [ ! -z "$FORCE_DIR" ]; then
             [ -z "$QUIET" ] && printf 'Warning: Overriding directory %q\n' "$OUTPUT" >&2
-            rm -f "$OUTPUT" && mv "$1" "$OUTPUT"
+            rm -rf "$OUTPUT" && mv "$1" "$OUTPUT"
         else
             mv "$1" "$OUTPUT"
         fi
