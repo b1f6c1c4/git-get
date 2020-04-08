@@ -167,7 +167,7 @@ if [ "${#PATH_POSITIONAL[@]}" -eq 1 ]; then
 elif [ "${#POSITIONAL[@]}" -eq 1 ]; then
     BRANCH="HEAD"
 elif [ "${#POSITIONAL[@]}" -eq 2 ]; then
-    if [ ! -z "$(echo "${POSITIONAL[1]}" | grep -P "^[0-9a-fA-F]{40}$")" ]; then
+    if [ ! -z "$(echo "${POSITIONAL[1]}" | grep -P "^[0-9a-fA-F]{7,40}$")" ]; then
         BRANCH="${POSITIONAL[1]}"
     else
         BRANCH_OR_DIR="${POSITIONAL[1]}"
@@ -245,7 +245,12 @@ else
     SHA1="$BRANCH"
 fi
 
-[ ! -z "$DIR" ] && BASENAME="$(basename "$DIR")"
+if [ ! -z "$DIR" ]; then
+    BASENAME="$(basename "$DIR")"
+else
+    BASENAME="$(basename "$REPO")"
+    BASENAME="${BASENAME%.git}"
+fi
 if [ ! -z "$VERBOSE" ]; then
     printf 'BRANCH=%q\n' "$BRANCH" >&2
     printf 'SHA1=%q\n' "$SHA1" >&2
@@ -311,13 +316,13 @@ got_dir() {
 
 got_repo() {
     set -e
-    sed -i 's/bare = true/bare = false/' "$1/.git/config"
+    git --git-dir="$1/.git" config --bool core.bare false
     if [ -z "$DIR" ]; then
         ARGS=(git reset --hard)
         [ ! -z "$QUIET" ] && ARGS+=(-q)
         [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-        rm -rf "$1/.git"
+        mv "$1/.git" ".git"
         got_dir "$1" && exit 0
     else
         # git restore --worktree issue fetch-pack one-by-another
@@ -341,7 +346,7 @@ got_repo() {
 }
 
 # TODO: recursive into submodules?
-# 0. git 2.20+ -> shallow + filter
+# 0. git 2.20+ -> shallow + [filter] -> filter
 if git_new; then
     mkdir -p "$BASENAME"
     ARGS=(git clone --bare)
@@ -352,12 +357,30 @@ if git_new; then
     ARGS+=("$REPO" "$BASENAME/.git")
     [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
     set +e
-    "${ARGS[@]}"
+    "${ARGS[@]}" 2>&1 | tee clone.log >&2
     if [ "$?" -eq 0 ]; then
         set -e
         got_repo "$BASENAME"
     fi
     set -e
+    if [ ! -z "$(grep 'warning: Could not find remote branch' clone.log)" ]; then
+        ARGS=(git clone --mirror --filter tree:0)
+        [ ! -z "$QUIET" ] && ARGS+=(-q)
+        ARGS+=("$REPO" "$BASENAME/.git")
+        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        set +e
+        "${ARGS[@]}"
+        if [ "$?" -eq 0 ]; then
+            SHA1="$(git --git-dir="$BASENAME/.git" rev-parse "$BRANCH")"
+            if [ ! -z "$SHA1" ]; then
+                [ -z "$QUIET" ] && printf 'Got SHA1: %q\n' "$SHA1" >&2
+                set -e
+                git --git-dir="$BASENAME/.git" update-ref --no-deref HEAD "$SHA1"
+                got_repo "$BASENAME"
+            fi
+        fi
+        set -e
+    fi
     rm -rf "$BASENAME"
 fi
 
