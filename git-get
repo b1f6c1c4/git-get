@@ -16,6 +16,13 @@ git-get
 EOF
 }
 
+git_new() {
+    V="$(git version)"
+    [[ "$V" =~ ^git[[:space:]]version[[:space:]]2\..\. ]] && return 1
+    [[ "$V" =~ ^git[[:space:]]version[[:space:]]2\.1.\. ]] && return 1
+    return 0
+}
+
 TOKEN=
 TOKEN_FILE="$HOME/.github-token"
 QUIET=
@@ -188,6 +195,8 @@ if [ $? -ne 0 ]; then
     exit 66
 fi
 
+git_new || ([ ! -z "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
+
 if [ ! -z "$FORCE_DIR" ]; then
     FORCE=YES
 fi
@@ -214,12 +223,16 @@ if [ ! -z "$VERBOSE" ]; then
     # printf 'DIR=%q\n' "$DIR" >&2
 fi
 
+[ ! -z "$RECURSIVE" ] && echo 'Error: Not yet supported.' >&2 && exit 114
+
 if [ ! -z "$BRANCH_OR_DIR" ]; then
     SHA1="$(git ls-remote "$REPO" "$BRANCH_OR_DIR")"
     if [ -z "$SHA1" ]; then
         BRANCH="HEAD"
         DIR="$BRANCH_OR_DIR"
         SHA1="$(git ls-remote "$REPO" "$BRANCH")"
+    else
+        BRANCH="$BRANCH_OR_DIR"
     fi
 else
     SHA1="$(git ls-remote "$REPO" "$BRANCH")"
@@ -232,9 +245,12 @@ else
     SHA1="$BRANCH"
 fi
 
+[ ! -z "$DIR" ] && BASENAME="$(basename "$DIR")"
 if [ ! -z "$VERBOSE" ]; then
+    printf 'BRANCH=%q\n' "$BRANCH" >&2
     printf 'SHA1=%q\n' "$SHA1" >&2
     printf 'DIR=%q\n' "$DIR" >&2
+    printf 'BASENAME=%q\n' "$BASENAME" >&2
 fi
 
 WORK_DIR="$(mktemp -d)"
@@ -248,25 +264,105 @@ cd "$WORK_DIR"
 [ ! -z "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
 
 got_file() {
+    set -e
     if [ "$OUTPUT" = "-" ]; then
-        cat file
+        cat "$1"
     elif [ -f "$OUTPUT" ]; then
         if [ ! -z "$FORCE" ]; then
             [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
-            mv -f file "$OUTPUT"
+            mv -f "$1" "$OUTPUT"
         else
             printf 'Error: File %q exists\n' "$OUTPUT" >&2
-            return 1
+            exit 1
         fi
     else
-        mv file "$OUTPUT"
+        mv "$1" "$OUTPUT"
     fi
-    return 0
+    [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
+    exit 0
 }
 
-IS_DIR=
+got_dir() {
+    set -e
+    if [ "$OUTPUT" = "-" ]; then
+        [ ! -z "$VERBOSE" ] && (cd "$(dirname "$1")" && ls -lhAR "$(basename "$1")" >&2)
+        (cd "$(dirname "$1")" && tar c "$(basename "$1")")
+    elif [ -d "$OUTPUT" ]; then
+        if [ ! -z "$FORCE_DIR" ]; then
+            [ -z "$QUIET" ] && printf 'Warning: Overriding directory %q\n' "$OUTPUT" >&2
+            rm -f "$OUTPUT" && mv "$1" "$OUTPUT"
+        else
+            mv "$1" "$OUTPUT"
+        fi
+    elif [ -f "$OUTPUT" ]; then
+        if [ ! -z "$FORCE" ]; then
+            [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
+            rm -f "$OUTPUT" && mv "$1" "$OUTPUT"
+        else
+            printf 'Error: File %q exists\n' "$OUTPUT" >&2
+            exit 1
+        fi
+    else
+        mv "$1" "$OUTPUT"
+    fi
+    [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
+    exit 0
+}
 
-# 0. GitHub / Path -> api.github.com
+got_repo() {
+    set -e
+    sed -i 's/bare = true/bare = false/' "$1/.git/config"
+    if [ -z "$DIR" ]; then
+        ARGS=(git reset --hard)
+        [ ! -z "$QUIET" ] && ARGS+=(-q)
+        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+        rm -rf "$1/.git"
+        got_dir "$1" && exit 0
+    else
+        # git restore --worktree issue fetch-pack one-by-another
+        # which is super slow
+        ARGS=(git reset HEAD)
+        [ ! -z "$QUIET" ] && ARGS+=(-q)
+        ARGS+=(-- "$DIR")
+        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+
+        ARGS=(git restore --worktree)
+        [ ! -z "$QUIET" ] && ARGS+=(-q)
+        ARGS+=(-- "$DIR")
+        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+        [ -f "$1/$DIR" ] && got_file "$1/$DIR"
+        [ -d "$1/$DIR" ] && got_dir "$1/$DIR"
+        echo 'Error: File type not supported.' >&2
+        exit 2
+    fi
+}
+
+# TODO: recursive into submodules?
+# 0. git 2.20+ -> shallow + filter
+if git_new; then
+    mkdir -p "$BASENAME"
+    ARGS=(git clone --bare)
+    [ ! -z "$QUIET" ] && ARGS+=(-q)
+    [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
+    ARGS+=(--depth 1 --no-tags)
+    [ ! -z "$DIR" ] && ARGS+=(--filter blob:none)
+    ARGS+=("$REPO" "$BASENAME/.git")
+    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    set +e
+    "${ARGS[@]}"
+    if [ "$?" -eq 0 ]; then
+        set -e
+        got_repo "$BASENAME"
+    fi
+    set -e
+    rm -rf "$BASENAME"
+fi
+
+# TODO: recursive into submodules?
+# 1. GitHub / Path -> api.github.com/.../contents
 if [ ! -z "$GITHUB" ] && [ ! -z "$DIR" ]; then
     ARGS=(curl -f -o file)
     ARGS+=(-w '%{content_type}')
@@ -274,24 +370,16 @@ if [ ! -z "$GITHUB" ] && [ ! -z "$DIR" ]; then
     [ ! -z "$TOKEN" ] && ARGS+=(-H "Authorization: token $TOKEN")
     [ ! -z "$QUIET" ] && ARGS+=(-s)
     [ ! -z "$VERBOSE" ] && ARGS+=(-S)
-    ARGS+=("https://api.github.com/repos/$GH_REPO/contents/$DIR?ref=$SHA1")
+    ARGS+=("https://api.github.com/repos/$GH_REPO/contents/$DIR?ref=$BRANCH")
     [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    set +e
     RES="$("${ARGS[@]}")"
-    if [ "$X" -eq 0 ]; then
-        [[ "$RES" =~ ^application/vnd.github.v3.raw ]] && got_file && exit 0
-        [[ "$RES" =~ ^application/json ]] && IS_DIR=YES
+    if [ "$?" -eq 0 ]; then
+        set -e
+        [[ "$RES" =~ ^application/vnd.github.v3.raw ]] && got_file file
+        # [[ "$RES" =~ ^application/json ]] && IS_DIR=YES
     fi
-fi
-
-# 1. GitHub / File -> raw.githubusercontent.com
-if [ ! -z "$GITHUB" ] && [ ! -z "$DIR" ]; then
-    ARGS=(curl -f -o file)
-    ARGS+=(-w '%{content_type}')
-    [ ! -z "$QUIET" ] && ARGS+=(-s)
-    [ ! -z "$VERBOSE" ] && ARGS+=(-S)
-    ARGS+=("https://raw.githubusercontent.com/$GH_REPO/$SHA1/$DIR")
-    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-    "${ARGS[@]}" && got_file && exit 0
+    set -e
 fi
 
 printf 'Error: No viable method.\n' >&2
