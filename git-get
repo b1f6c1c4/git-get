@@ -1,18 +1,29 @@
 #!/bin/bash
 
+set -euo pipefail
+
 usage()
 {
     cat - <<EOF
-git-download
+git-get
     [-v|--verbose|-q|--quiet]
-    [https://github.com/]<user>/<repo>
+    [https://github.com/|git@github.com:]<user>/<repo>
     [<branch>|<sha1>]
     [-o <target> [-f|--force] [-F|--rm-rf]]
-    [--[no-]legacy]
-    [-r|--recursive] [--] [<path>]
+    [-t [--tag-file=VERSION]]
+    [-r|--recursive] [-j<N>] [--] [<path>]
 EOF
 }
 
+QUIET=
+VERBOSE=
+RECURSIVE=
+FORCE=
+FORCE_DIR=
+OUTPUT=
+TAG=
+TAG_FILE=
+JOBS=1
 POSITIONAL=()
 while [ $# -gt 0 ]; do
     key="$1"
@@ -46,12 +57,19 @@ while [ $# -gt 0 ]; do
             shift
             shift
             ;;
-        --legacy)
-            LEGACY=YES
+        -t|--tag)
+            TAG=YES
             shift
             ;;
-        --no-legacy)
-            LEGACY=NO
+        --tag-file)
+            TAG=YES
+            TAG_FILE="$2"
+            shift
+            shift
+            ;;
+        -j|--jobs)
+            JOBS="$2"
+            shift
             shift
             ;;
         --)
@@ -59,8 +77,13 @@ while [ $# -gt 0 ]; do
             break
             ;;
         *)
-            POSITIONAL+=("$1")
-            shift
+            if [[ "$1" =~ ^-j ]]; then
+                JOBS="${1#-j}"
+                shift
+            else
+                POSITIONAL+=("$1")
+                shift
+            fi
             ;;
     esac
 done
@@ -72,67 +95,124 @@ while [ $# -gt 0 ]; do
 done
 
 if [ "${#POSITIONAL[@]}" -eq 0 ]; then
-    echo "Must specify <user>/<repo>"
+    echo "Error: Must specify <repo-url> or <user>/<repo>"
     exit 1
 fi
 
-REPO=$(echo "${POSITIONAL[0]}" | sed -E 's_^[^/]+/[^/]+$_git@github.com:\0_')
-
-total=$((${#POSITIONAL[@]} + ${#PATH_POSITIONAL[@]}))
-if [ "$total" -gt 3 ] || [ "${#PATH_POSITIONAL[@]}" -gt 1 ]; then
-    echo "Too many positional arguments"
-    exit 1
-fi
-
-if [ "${#PATH_POSITIONAL[@]}" -eq 1 ]; then
-    BRANCH="${POSITIONAL[1]}"
-    DIR="${PATH_POSITIONAL[0]}"
-elif [ "${#POSITIONAL[@]}" -eq 3 ]; then
-    BRANCH="${POSITIONAL[1]}"
-    DIR="${POSITIONAL[2]}"
+if [[ "${POSITIONAL[0]}" =~ ^https://github.com/ ]]; then
+    GITHUB=YES
+    GH_REPO="${POSITIONAL[0]#https://github.com/}"
+    GH_REPO="${GH_REPO%.git}"
+    REPO="${POSITIONAL[0]}"
+elif [[ "${POSITIONAL[0]}" =~ ^git@github.com: ]]; then
+    GITHUB=YES
+    GH_REPO="${POSITIONAL[0]#git@github.com:}"
+    GH_REPO="${GH_REPO%.git}"
+    REPO="${POSITIONAL[0]}"
+elif [[ "${POSITIONAL[0]}" =~ ^.*/.*/.*$ ]]; then
+    REPO="${POSITIONAL[0]}"
 else
-    MAYBE_BRANCH="${POSITIONAL[1]}"
-    is_sha1=$(echo "$MAYBE_BRANCH" | grep -P "^[0-9a-fA-F]{40}$")
-    if [ ! -z "$is_sha1" ]; then
-        BRANCH="$MAYBE_BRANCH"
-        MAYBE_BRANCH=
+    GITHUB=YES
+    GH_REPO="${POSITIONAL[0]}"
+    REPO="git@github.com:${POSITIONAL[0]}.git"
+fi
+
+if [ -z "$OUTPUT" ]; then
+    if [ ! -z "$GITHUB" ]; then
+        OUTPUT="${GH_REPO#*/}"
+    else
+        OUTPUT="${REPO##*/}"
+        OUTPUT="${OUTPUT%.git}"
     fi
 fi
 
-if [ -z "$BRANCH" ] && [ -z "$MAYBE_BRANCH" ]; then
+total="$((${#POSITIONAL[@]} + ${#PATH_POSITIONAL[@]}))"
+if [ "$total" -gt 3 ] || [ "${#PATH_POSITIONAL[@]}" -gt 1 ]; then
+    echo "Error: Too many positional arguments" >&2
+    exit 1
+fi
+
+BRANCH=
+BRANCH_OR_DIR=
+DIR=
+if [ "${#PATH_POSITIONAL[@]}" -eq 1 ]; then
+    BRANCH="${POSITIONAL[1]}"
+    DIR="${PATH_POSITIONAL[0]}"
+elif [ "${#POSITIONAL[@]}" -eq 1 ]; then
     BRANCH="HEAD"
+elif [ "${#POSITIONAL[@]}" -eq 2 ]; then
+    if [ ! -z "$(echo "${POSITIONAL[1]}" | grep -P "^[0-9a-fA-F]{40}$")" ]; then
+        BRANCH="${POSITIONAL[1]}"
+    else
+        BRANCH_OR_DIR="${POSITIONAL[1]}"
+    fi
+elif [ "${#POSITIONAL[@]}" -eq 3 ]; then
+    BRANCH="${POSITIONAL[1]}"
+    DIR="${POSITIONAL[2]}"
+fi
+
+if [ ! -z "$TAG" ]; then
+    if [ -z "$TAG_FILE" ]; then
+        TAG_FILE="VERSION"
+    fi
+else
+    TAG_FILE=
 fi
 
 which git >/dev/null
 if [ $? -ne 0 ]; then
-    echo "Git not found"
+    echo "Error: git(1) not found"
     exit 66
 fi
 
+if [ ! -z "$VERBOSE" ]; then
+    printf 'FORCE=%q\n' "$FORCE" >&2
+    printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
+    printf 'OUTPUT=%q\n' "$OUTPUT" >&2
+    printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
+    printf 'GITHUB=%q\n' "$GITHUB" >&2
+    printf 'GH_REPO=%q\n' "$GH_REPO" >&2
+    printf 'REPO=%q\n' "$REPO" >&2
+    printf 'RECURSIVE=%q\n' "$RECURSIVE" >&2
+    printf 'JOBS=%q\n' "$JOBS" >&2
+    # printf 'BRANCH=%q\n' "$BRANCH" >&2
+    # printf 'BRANCH_OR_DIR=%q\n' "$BRANCH_OR_DIR" >&2
+    # printf 'DIR=%q\n' "$DIR" >&2
+fi
+
+if [ ! -z "$BRANCH_OR_DIR" ]; then
+    SHA1="$(git ls-remote "$REPO" "$BRANCH_OR_DIR")"
+    if [ -z "$SHA1" ]; then
+        BRANCH="HEAD"
+        DIR="$BRANCH_OR_DIR"
+        SHA1="$(git ls-remote "$REPO" "$BRANCH")"
+    fi
+else
+    SHA1="$(git ls-remote "$REPO" "$BRANCH")"
+fi
+
+if [ -z "$SHA1" ]; then
+    printf 'Error: Reference %q not found in %q\n' "$BRANCH" "$REPO" >&2
+    exit 2
+fi
+SHA1="${SHA1%%	*}"
+
+if [ ! -z "$VERBOSE" ]; then
+    printf 'SHA1=%q\n' "$SHA1" >&2
+    printf 'DIR=%q\n' "$DIR" >&2
+fi
+
+exit 0
+
 WORK_DIR=$(mktemp -d)
-REPO_DIR="$WORK_DIR/.git"
 trap "{ rm -rf "$WORK_DIR"; }" EXIT
+
+REPO_DIR="$WORK_DIR/.git"
 
 git init $QUIET "$WORK_DIR"
 git --git-dir="$REPO_DIR" remote add origin "$REPO"
 if [ ! -z "$VERBOSE" ]; then
     echo "Remote:" "$REPO"
-fi
-
-if [ ! -z $MAYBE_BRANCH ]; then
-    SHA1=$(git --git-dir="$REPO_DIR" ls-remote origin $MAYBE_BRANCH)
-    if [ -z "$SHA1" ]; then
-        BRANCH="HEAD"
-        DIR="$MAYBE_BRANCH"
-        SHA1=$(git --git-dir="$REPO_DIR" ls-remote origin $BRANCH)
-    fi
-else
-    SHA1=$(git --git-dir="$REPO_DIR" ls-remote origin $BRANCH)
-fi
-
-if [ -z "$SHA1" ]; then
-    echo "Reference $BRANCH not found in $REPO"
-    exit 2
 fi
 
 set -- $SHA1
