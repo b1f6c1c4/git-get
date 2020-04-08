@@ -11,10 +11,13 @@ git-get
     [<branch>|<sha1>]
     [-o <target> [-f|--force] [-F|--rm-rf]]
     [-t [--tag-file=VERSION]]
+    [--token <token> | --token-file <file>]
     [-r|--recursive] [-j<N>] [--] [<path>]
 EOF
 }
 
+TOKEN=
+TOKEN_FILE="$HOME/.github-token"
 QUIET=
 VERBOSE=
 RECURSIVE=
@@ -57,6 +60,10 @@ while [ $# -gt 0 ]; do
             shift
             shift
             ;;
+        -o-)
+            OUTPUT="-"
+            shift
+            ;;
         -t|--tag)
             TAG=YES
             shift
@@ -69,6 +76,18 @@ while [ $# -gt 0 ]; do
             ;;
         -j|--jobs)
             JOBS="$2"
+            shift
+            shift
+            ;;
+        --token)
+            TOKEN="$2"
+            TOKEN_FILE=""
+            shift
+            shift
+            ;;
+        --token-file)
+            TOKEN=""
+            TOKEN_FILE="$2"
             shift
             shift
             ;;
@@ -159,13 +178,28 @@ else
     TAG_FILE=
 fi
 
+if [ -z "$TOKEN" ] && [ -f "$TOKEN_FILE" ]; then
+    TOKEN="$(cat "$TOKEN_FILE")"
+fi
+
 which git >/dev/null
 if [ $? -ne 0 ]; then
     echo "Error: git(1) not found"
     exit 66
 fi
 
+if [ ! -z "$FORCE_DIR" ]; then
+    FORCE=YES
+fi
+if [ ! "$OUTPUT" = '-' ]; then
+    OUTPUT="$(realpath "$OUTPUT")"
+fi
 if [ ! -z "$VERBOSE" ]; then
+    if [ ! -z "$TOKEN" ]; then
+        printf 'TOKEN=%s\n' "********" >&2
+    else
+        printf 'TOKEN=%s\n' "" >&2
+    fi
     printf 'FORCE=%q\n' "$FORCE" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
@@ -191,21 +225,77 @@ else
     SHA1="$(git ls-remote "$REPO" "$BRANCH")"
 fi
 
-if [ -z "$SHA1" ]; then
-    printf 'Error: Reference %q not found in %q\n' "$BRANCH" "$REPO" >&2
-    exit 2
+if [ ! -z "$SHA1" ]; then
+    P=$'\t*'
+    SHA1="${SHA1%%$P}"
+else
+    SHA1="$BRANCH"
 fi
-SHA1="${SHA1%%	*}"
 
 if [ ! -z "$VERBOSE" ]; then
     printf 'SHA1=%q\n' "$SHA1" >&2
     printf 'DIR=%q\n' "$DIR" >&2
 fi
 
-exit 0
+WORK_DIR="$(mktemp -d)"
+finish() {
+    cd /
+    rm -rf "$WORK_DIR"
+}
+trap finish EXIT
+cd "$WORK_DIR"
 
-WORK_DIR=$(mktemp -d)
-trap "{ rm -rf "$WORK_DIR"; }" EXIT
+[ ! -z "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
+
+got_file() {
+    if [ "$OUTPUT" = "-" ]; then
+        cat file
+    elif [ -f "$OUTPUT" ]; then
+        if [ ! -z "$FORCE" ]; then
+            [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
+            mv -f file "$OUTPUT"
+        else
+            printf 'Error: File %q exists\n' "$OUTPUT" >&2
+            return 1
+        fi
+    else
+        mv file "$OUTPUT"
+    fi
+    return 0
+}
+
+IS_DIR=
+
+# 0. GitHub / Path -> api.github.com
+if [ ! -z "$GITHUB" ] && [ ! -z "$DIR" ]; then
+    ARGS=(curl -f -o file)
+    ARGS+=(-w '%{content_type}')
+    ARGS+=(-H 'Accept: application/vnd.github.v3.raw')
+    [ ! -z "$TOKEN" ] && ARGS+=(-H "Authorization: token $TOKEN")
+    [ ! -z "$QUIET" ] && ARGS+=(-s)
+    [ ! -z "$VERBOSE" ] && ARGS+=(-S)
+    ARGS+=("https://api.github.com/repos/$GH_REPO/contents/$DIR?ref=$SHA1")
+    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    RES="$("${ARGS[@]}")"
+    if [ "$X" -eq 0 ]; then
+        [[ "$RES" =~ ^application/vnd.github.v3.raw ]] && got_file && exit 0
+        [[ "$RES" =~ ^application/json ]] && IS_DIR=YES
+    fi
+fi
+
+# 1. GitHub / File -> raw.githubusercontent.com
+if [ ! -z "$GITHUB" ] && [ ! -z "$DIR" ]; then
+    ARGS=(curl -f -o file)
+    ARGS+=(-w '%{content_type}')
+    [ ! -z "$QUIET" ] && ARGS+=(-s)
+    [ ! -z "$VERBOSE" ] && ARGS+=(-S)
+    ARGS+=("https://raw.githubusercontent.com/$GH_REPO/$SHA1/$DIR")
+    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    "${ARGS[@]}" && got_file && exit 0
+fi
+
+printf 'Error: No viable method.\n' >&2
+exit 0
 
 REPO_DIR="$WORK_DIR/.git"
 
