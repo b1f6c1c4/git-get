@@ -21,12 +21,11 @@ git-get <url> <commit> -- <file>|<dir>
 #     rm -rf <repo>/.git
 # ... and is 1x~1000000000x faster
 
-git-get --recursive <url>
+git-gets <url>
 # Equivalent to:
 #     git clone --depth=1 <url> && cd <repo>
 #     git submodule init --recursive
 #     git submodule update --recursive
-#     rm -rf **/.git
 # ... and is 1x~10000000x faster
 ```
 
@@ -37,26 +36,36 @@ git-get
     [<branch>|<sha1>]
     [-o <target>] [-f|--force] [-F|--rm-rf]
     [-t [--tag-file=VERSION]]
-    [-r|--recursive] [-j<N>] [-- <path>]
+    [-- <path>]
+
+git-gets
+    [-v|--verbose|-q|--quiet]
+    <url> | <user>/<repo>
+    [<branch>|<sha1>]
+    [[-o] <target>] [-F|--rm-rf]
+    [--flat [--tag-file=VERSION]]
 ```
 
 ## Install
 
 Currently only supports bash.
 
-First time installation (bootstrapping):
 ```bash
 wget -qO- https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/bin/git-get > /dev/null && sudo chmod 755 /usr/bin/git-get
+wget -qO- https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/bin/git-gets > /dev/null && sudo chmod 755 /usr/bin/git-gets
 # Or, locally:
 mkdir -p ~/.local/bin/
 wget -qO- https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && sudo chmod 755 ~/.local/bin/git-get
+wget -qO- https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && sudo chmod 755 ~/.local/bin/git-gets
 ```
 
 Upgrading:
 ```bash
-git-get -o- b1f6c1c4/git-get git-get | sudo tee /usr/bin/git-get
+git-get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/bin/git-get
+git-get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/bin/git-gets
 # Or, locally:
-git-get -f -o ~/.local/bin/ b1f6c1c4/git-get git-get
+git-get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
+git-get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
 ```
 
 ## License

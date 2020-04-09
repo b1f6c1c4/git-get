@@ -5,14 +5,12 @@ set -euo pipefail
 usage()
 {
     cat - <<EOF
-git-get
+git-gets
     [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo>
     [<branch>|<sha1>]
-    [-o <target>] [-f|--force] [-F|--rm-rf]
-    [-t [--tag-file=VERSION]]
-    [--token <token> | --token-file <file>]
-    [-- <path>]
+    [[-o] <target>] [-F|--rm-rf]
+    [--flat [--tag-file=VERSION]]
 EOF
 }
 
@@ -31,16 +29,12 @@ fakerealpath() {
     fi
 }
 
-TOKEN=
-TOKEN_FILE="$HOME/.github-token"
 QUIET=
 VERBOSE=
-FORCE=
 FORCE_DIR=
 OUTPUT=
-TAG=
+FLAT=
 TAG_FILE=
-DIR=
 POSITIONAL=()
 while [ $# -gt 0 ]; do
     key="$1"
@@ -57,8 +51,8 @@ while [ $# -gt 0 ]; do
             VERBOSE=YES
             shift
             ;;
-        -f|--force)
-            FORCE=YES
+        -r|--recursive)
+            RECURSIVE=YES
             shift
             ;;
         -F|--rm-rf)
@@ -74,33 +68,15 @@ while [ $# -gt 0 ]; do
             OUTPUT="-"
             shift
             ;;
-        -t|--tag)
-            TAG=YES
+        --flat)
+            FLAT=YES
             shift
             ;;
         --tag-file)
-            TAG=YES
+            FLAT=YES
             TAG_FILE="$2"
             shift
             shift
-            ;;
-        --token)
-            TOKEN="$2"
-            TOKEN_FILE=""
-            shift
-            shift
-            ;;
-        --token-file)
-            TOKEN=""
-            TOKEN_FILE="$2"
-            shift
-            shift
-            ;;
-        --)
-            DIR="$2"
-            shift
-            shift
-            break
             ;;
         *)
             POSITIONAL+=("$1")
@@ -180,14 +156,12 @@ fi
 if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
-OCWD="$PWD"
 if [ ! -z "$VERBOSE" ]; then
     if [ ! -z "$TOKEN" ]; then
         printf 'TOKEN=%s\n' "********" >&2
     else
         printf 'TOKEN=%s\n' "" >&2
     fi
-    printf 'OCWD=%q\n' "$OCWD" >&2
     printf 'FORCE=%q\n' "$FORCE" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
@@ -195,10 +169,14 @@ if [ ! -z "$VERBOSE" ]; then
     printf 'GITHUB=%q\n' "$GITHUB" >&2
     printf 'GH_REPO=%q\n' "$GH_REPO" >&2
     printf 'REPO=%q\n' "$REPO" >&2
+    printf 'RECURSIVE=%q\n' "$RECURSIVE" >&2
+    printf 'JOBS=%q\n' "$JOBS" >&2
     printf 'BRANCH=%q\n' "$BRANCH" >&2
     printf 'DIR=%q\n' "$DIR" >&2
     printf 'BASENAME=%q\n' "$BASENAME" >&2
 fi
+
+[ ! -z "$RECURSIVE" ] && echo 'Error: Not yet supported.' >&2 && exit 114
 
 WORK_DIR="$(mktemp -d)"
 finish() {
@@ -226,14 +204,6 @@ got_file() {
         mv "$1" "$OUTPUT"
     fi
     [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
-    [ -z "$QUIET" ] && printf 'tag = %s\n' "$2" >&2
-    if [ ! -z "$TAG" ]; then
-        if [[ "$TAG_FILE" =~ ^/ ]]; then
-            printf '%s\n' "$2" >"$TAG_FILE"
-        else
-            printf '%s\n' "$2" >"$OCWD/$TAG_FILE"
-        fi
-    fi
     exit 0
 }
 
@@ -261,16 +231,6 @@ got_dir() {
         mv "$1" "$OUTPUT"
     fi
     [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
-    [ -z "$QUIET" ] && printf 'tag = %s\n' "$2" >&2
-    if [ ! -z "$TAG" ]; then
-        if [[ "$TAG_FILE" =~ ^/ ]]; then
-            printf '%s\n' "$2" >"$TAG_FILE"
-        elif [ "$OUTPUT" = "-" ]; then
-            printf '%s\n' "$2" >"$OCWD/$TAG_FILE"
-        else
-            printf '%s\n' "$2" >"$OUTPUT/$TAG_FILE"
-        fi
-    fi
     exit 0
 }
 
@@ -283,7 +243,7 @@ got_repo() {
         [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
         mv "$1/.git" ".git"
-        got_dir "$1" "$2" && exit 0
+        got_dir "$1" && exit 0
     else
         # git restore --worktree issue fetch-pack one-by-another
         # which is super slow
@@ -298,14 +258,13 @@ got_repo() {
         ARGS+=(-- "$DIR")
         [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-        [ -f "$1/$DIR" ] && got_file "$1/$DIR" "$2"
-        [ -d "$1/$DIR" ] && got_dir "$1/$DIR" "$2"
+        [ -f "$1/$DIR" ] && got_file "$1/$DIR"
+        [ -d "$1/$DIR" ] && got_dir "$1/$DIR"
         echo 'Error: File type not supported.' >&2
         exit 2
     fi
 }
 
-# TODO: recursive into submodules?
 # 0. git 2.20+ -> shallow + [filter] -> filter
 if git_new; then
     mkdir -p "$BASENAME"
@@ -320,7 +279,7 @@ if git_new; then
     "${ARGS[@]}" 2>&1 | tee clone.log >&2
     if [ "$?" -eq 0 ]; then
         set -e
-        got_repo "$BASENAME" "$(git --git-dir="$BASENAME/.git" rev-parse HEAD)"
+        got_repo "$BASENAME"
     fi
     set -e
     if [ ! -z "$(grep 'warning: Could not find remote branch' clone.log)" ]; then
@@ -336,33 +295,12 @@ if git_new; then
                 [ -z "$QUIET" ] && printf 'Got SHA1: %q\n' "$SHA1" >&2
                 set -e
                 git --git-dir="$BASENAME/.git" update-ref --no-deref HEAD "$SHA1"
-                got_repo "$BASENAME" "$SHA1"
+                got_repo "$BASENAME"
             fi
         fi
         set -e
     fi
     rm -rf "$BASENAME"
-fi
-
-# TODO: recursive into submodules?
-# 1. GitHub / Path -> api.github.com/.../contents
-if [ ! -z "$GITHUB" ] && [ ! -z "$DIR" ]; then
-    ARGS=(curl -f -o file)
-    ARGS+=(-w '%{content_type}')
-    ARGS+=(-H 'Accept: application/vnd.github.v3.raw')
-    [ ! -z "$TOKEN" ] && ARGS+=(-H "Authorization: token $TOKEN")
-    [ ! -z "$QUIET" ] && ARGS+=(-s)
-    [ ! -z "$VERBOSE" ] && ARGS+=(-S)
-    ARGS+=("https://api.github.com/repos/$GH_REPO/contents/$DIR?ref=$BRANCH")
-    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-    set +e
-    RES="$("${ARGS[@]}")"
-    if [ "$?" -eq 0 ]; then
-        set -e
-        [[ "$RES" =~ ^application/vnd.github.v3.raw ]] && got_file file "$BRANCH"
-        # [[ "$RES" =~ ^application/json ]] && IS_DIR=YES
-    fi
-    set -e
 fi
 
 printf 'Error: No viable method.\n' >&2
