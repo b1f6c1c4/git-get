@@ -234,16 +234,17 @@ got_repo() {
 
     awk -F '"' '/^\[submodule / { print $2; }' "$1/.git/config" | (
     while IFS= read -r line; do
-        URL="$(git --git-dir="$1/.git" config "submodule.$line.url")"
-        SSHA1="$(git --git-dir="$1/.git" ls-files -s "$line" | cut -d ' ' -f2)"
-        [ ! -z "$VERBOSE" ] && printf '%s %s %s\n' "$line" "$URL" "$SSHA1">&2
-        rmdir "$1/$line"
+        PA="$(git config --file "$1/.gitmodules" "submodule.$line.path")"
+        URL="$(git config --file "$1/.git/config" "submodule.$line.url")"
+        SSHA1="$(git --git-dir="$1/.git" ls-files -s "$PA" | cut -d ' ' -f2)"
+        [ ! -z "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
+        rmdir "$1/$PA"
         ARGS=("$0")
         [ ! -z "$VERBOSE" ] && ARGS+=(--verbose)
         [ ! -z "$QUIET" ] && ARGS+=(--quiet)
-        ARGS+=(-o "$1/$line" "$URL" "$SSHA1")
+        ARGS+=(-o "$1/$PA" "$URL" "$SSHA1")
         [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-        [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$line" "$URL" "$SSHA1">&2
+        [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
         env RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
     done)
     # [ ! -z "$JOBS" ] && ARGS+=(--jobs "$JOBS")
