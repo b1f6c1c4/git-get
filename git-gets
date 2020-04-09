@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ -z "$RAW" ]; then
+    RAW=
+else
+    RAW="$RAW"
+fi
+
 set -euo pipefail
 
 usage()
@@ -158,6 +164,7 @@ if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
 if [ ! -z "$VERBOSE" ]; then
+    printf 'RAW=%q\n' "$RAW" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
     printf 'FLAT=%q\n' "$FLAT" >&2
@@ -175,7 +182,7 @@ finish() {
     cd /
     rm -rf "$WORK_DIR"
 }
-# trap finish EXIT
+trap finish EXIT
 cd "$WORK_DIR"
 
 [ ! -z "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
@@ -210,18 +217,44 @@ got_dir() {
 got_repo() {
     set -e
     git --git-dir="$1/.git" config --bool core.bare false
+    git --git-dir="$1/.git" config core.repositoryformatversion 0
+
     ARGS=(git reset --hard)
     [ ! -z "$QUIET" ] && ARGS+=(-q)
     [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
     [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
     [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+
     ARGS=(git submodule)
     [ ! -z "$QUIET" ] && ARGS+=(--quiet)
-    ARGS+=(update --init --no-fetch)
+    ARGS+=(init)
     [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-    [ ! -z "$JOBS" ] && ARGS+=(--jobs "$JOBS")
     [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
     [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+
+    awk -F '"' '/^\[submodule / { print $2; }' "$1/.git/config" | (
+    while IFS= read -r line; do
+        URL="$(git --git-dir="$1/.git" config "submodule.$line.url")"
+        SSHA1="$(git --git-dir="$1/.git" ls-files -s "$line" | cut -d ' ' -f2)"
+        [ ! -z "$VERBOSE" ] && printf '%s %s %s\n' "$line" "$URL" "$SSHA1">&2
+        rmdir "$1/$line"
+        ARGS=("$0")
+        [ ! -z "$VERBOSE" ] && ARGS+=(--verbose)
+        [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+        ARGS+=(-o "$1/$line" "$URL" "$SSHA1")
+        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$line" "$URL" "$SSHA1">&2
+        env RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+    done)
+    # [ ! -z "$JOBS" ] && ARGS+=(--jobs "$JOBS")
+    if [ -z "$RAW" ]; then
+        ARGS=(git submodule)
+        [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+        ARGS+=(absorbgitdirs)
+        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+    fi
     [ ! -z "$FLAT" ] && mv "$1/.git" ".git"
     got_dir "$1"
 }
@@ -237,8 +270,14 @@ if git_new; then
     ARGS+=("$REPO" "$BASENAME/.git")
     [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
     set +e
-    "${ARGS[@]}" 2>&1 | tee clone.log >&2
-    if [ "$?" -eq 0 ]; then
+    if [ -z "$QUIET" ]; then
+        "${ARGS[@]}" 2>&1 | tee clone.log >&2
+        R="$?"
+    else
+        "${ARGS[@]}" 1>clone.log 2>&1
+        R="$?"
+    fi
+    if [ "$R" -eq 0 ]; then
         set -e
         got_repo "$BASENAME"
     fi
