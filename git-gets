@@ -17,7 +17,7 @@ git-gets
     [<branch>|<sha1>]
     [[-o] <target>] [-F|--rm-rf]
     [--flat [--tag-file=VERSION]]
-    [-j<N>]
+    [-j<N>] [-c]
 EOF
 }
 
@@ -43,6 +43,7 @@ OUTPUT=
 FLAT=
 TAG_FILE=
 JOBS=
+CONFIRM=
 POSITIONAL=()
 while [ $# -gt 0 ]; do
     key="$1"
@@ -85,6 +86,10 @@ while [ $# -gt 0 ]; do
         -j)
             JOBS="$2"
             shift
+            shift
+            ;;
+        -c|--confirm)
+            CONFIRM=YES
             shift
             ;;
         *)
@@ -170,6 +175,7 @@ if [ ! -z "$VERBOSE" ]; then
     printf 'FLAT=%q\n' "$FLAT" >&2
     printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
     printf 'JOBS=%q\n' "$JOBS" >&2
+    printf 'CONFIRM=%q\n' "$CONFIRM" >&2
     printf 'GITHUB=%q\n' "$GITHUB" >&2
     printf 'GH_REPO=%q\n' "$GH_REPO" >&2
     printf 'REPO=%q\n' "$REPO" >&2
@@ -243,9 +249,38 @@ got_repo() {
         [ ! -z "$VERBOSE" ] && ARGS+=(--verbose)
         [ ! -z "$QUIET" ] && ARGS+=(--quiet)
         ARGS+=(-o "$1/$PA" "$URL" "$SSHA1")
-        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-        [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
-        env RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+        if [ ! -z "$CONFIRM" ]; then
+            PMT="$(printf 'Will clone %s from %s, proceed? (Y/n) ...' "$PA" "$URL")"
+            while true; do
+                read -p "$PMT" -n 1 -r <&2
+                case "$REPLY" in
+                    "")
+                        [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
+                        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+                        env RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+                        break
+                        ;;
+                    y|Y)
+                        printf '\n' >&2
+                        [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
+                        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+                        env RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+                        break
+                        ;;
+                    n|N)
+                        printf '\n' >&2
+                        [ -z "$QUIET" ] && printf '%s %s %s %s\n' '---' "$PA" "$URL" "$SSHA1">&2
+                        break
+                        ;;
+                    *)
+                        printf '\n' >&2
+                        ;;
+                esac
+            done
+        else
+            [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
+            env RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+        fi
     done)
     # [ ! -z "$JOBS" ] && ARGS+=(--jobs "$JOBS")
     if [ -z "$RAW" ]; then
