@@ -183,7 +183,7 @@ if [ ! -z "$VERBOSE" ]; then
     printf 'BASENAME=%q\n' "$BASENAME" >&2
 fi
 
-WORK_DIR="$(mktemp -d)"
+WORK_DIR="$(realpath "$(mktemp -d)")"
 finish() {
     cd /
     rm -rf "$WORK_DIR"
