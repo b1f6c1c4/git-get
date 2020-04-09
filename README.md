@@ -35,7 +35,7 @@ git-get
     <url> | <user>/<repo>
     [<branch>|<sha1>]
     [-o <target>] [-f|--force] [-F|--rm-rf]
-    [-t [--tag-file=VERSION]]
+    [--preserve-git | -t [--tag-file=VERSION]]
     [-- <path>]
 
 git-gets

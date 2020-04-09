@@ -11,6 +11,7 @@ git-gets
     [<branch>|<sha1>]
     [[-o] <target>] [-F|--rm-rf]
     [--flat [--tag-file=VERSION]]
+    [-j<N>]
 EOF
 }
 
@@ -35,6 +36,7 @@ FORCE_DIR=
 OUTPUT=
 FLAT=
 TAG_FILE=
+JOBS=
 POSITIONAL=()
 while [ $# -gt 0 ]; do
     key="$1"
@@ -49,10 +51,6 @@ while [ $# -gt 0 ]; do
             ;;
         -v|--verbose)
             VERBOSE=YES
-            shift
-            ;;
-        -r|--recursive)
-            RECURSIVE=YES
             shift
             ;;
         -F|--rm-rf)
@@ -78,17 +76,21 @@ while [ $# -gt 0 ]; do
             shift
             shift
             ;;
+        -j)
+            JOBS="$2"
+            shift
+            shift
+            ;;
         *)
-            POSITIONAL+=("$1")
+            if [[ "$1" =~ ^-j ]]; then
+                JOBS="${1#-j}"
+            else
+                POSITIONAL+=("$1")
+            fi
             shift
             ;;
     esac
 done
-
-if [ "$#" -gt 0 ]; then
-    echo "Error: Only one path allowed!" >&2
-    exit 1
-fi
 
 if [ "${#POSITIONAL[@]}" -eq 0 ]; then
     echo "Error: Must specify <repo-url> (any git remote) or <user>/<repo> (GitHub)"
@@ -97,8 +99,15 @@ elif [ "${#POSITIONAL[@]}" -eq 1 ]; then
     BRANCH="HEAD"
 elif [ "${#POSITIONAL[@]}" -eq 2 ]; then
     BRANCH="${POSITIONAL[1]}"
+elif [ "${#POSITIONAL[@]}" -eq 3 ]; then
+    if [ ! -z "$OUTPUT" ]; then
+        echo "Error: Too many positional arguments?" >&2
+        exit 1
+    fi
+    BRANCH="${POSITIONAL[1]}"
+    OUTPUT="${POSITIONAL[2]}"
 else
-    echo "Error: Too many positional arguments, maybe you forgot -- before <path>?" >&2
+    echo "Error: Too many positional arguments?" >&2
     exit 1
 fi
 
@@ -120,26 +129,18 @@ else
     REPO="git@github.com:${POSITIONAL[0]}.git"
 fi
 
-if [ ! -z "$DIR" ]; then
-    BASENAME="$(basename "$DIR")"
-else
-    BASENAME="$(basename "$REPO")"
-    BASENAME="${BASENAME%.git}"
-fi
+BASENAME="$(basename "$REPO")"
+BASENAME="${BASENAME%.git}"
 if [ -z "$OUTPUT" ]; then
     OUTPUT="$BASENAME"
 fi
 
-if [ ! -z "$TAG" ]; then
+if [ ! -z "$FLAT" ]; then
     if [ -z "$TAG_FILE" ]; then
         TAG_FILE="VERSION"
     fi
 else
     TAG_FILE=
-fi
-
-if [ -z "$TOKEN" ] && [ -f "$TOKEN_FILE" ]; then
-    TOKEN="$(cat "$TOKEN_FILE")"
 fi
 
 which git >/dev/null
@@ -157,55 +158,27 @@ if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
 if [ ! -z "$VERBOSE" ]; then
-    if [ ! -z "$TOKEN" ]; then
-        printf 'TOKEN=%s\n' "********" >&2
-    else
-        printf 'TOKEN=%s\n' "" >&2
-    fi
-    printf 'FORCE=%q\n' "$FORCE" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
+    printf 'FLAT=%q\n' "$FLAT" >&2
     printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
+    printf 'JOBS=%q\n' "$JOBS" >&2
     printf 'GITHUB=%q\n' "$GITHUB" >&2
     printf 'GH_REPO=%q\n' "$GH_REPO" >&2
     printf 'REPO=%q\n' "$REPO" >&2
-    printf 'RECURSIVE=%q\n' "$RECURSIVE" >&2
-    printf 'JOBS=%q\n' "$JOBS" >&2
     printf 'BRANCH=%q\n' "$BRANCH" >&2
-    printf 'DIR=%q\n' "$DIR" >&2
     printf 'BASENAME=%q\n' "$BASENAME" >&2
 fi
-
-[ ! -z "$RECURSIVE" ] && echo 'Error: Not yet supported.' >&2 && exit 114
 
 WORK_DIR="$(mktemp -d)"
 finish() {
     cd /
     rm -rf "$WORK_DIR"
 }
-trap finish EXIT
+# trap finish EXIT
 cd "$WORK_DIR"
 
 [ ! -z "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
-
-got_file() {
-    set -e
-    if [ "$OUTPUT" = "-" ]; then
-        cat "$1"
-    elif [ -f "$OUTPUT" ]; then
-        if [ ! -z "$FORCE" ]; then
-            [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
-            mv -f "$1" "$OUTPUT"
-        else
-            printf 'Error: File %q exists\n' "$OUTPUT" >&2
-            exit 1
-        fi
-    else
-        mv "$1" "$OUTPUT"
-    fi
-    [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
-    exit 0
-}
 
 got_dir() {
     set -e
@@ -237,32 +210,20 @@ got_dir() {
 got_repo() {
     set -e
     git --git-dir="$1/.git" config --bool core.bare false
-    if [ -z "$DIR" ]; then
-        ARGS=(git reset --hard)
-        [ ! -z "$QUIET" ] && ARGS+=(-q)
-        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-        mv "$1/.git" ".git"
-        got_dir "$1" && exit 0
-    else
-        # git restore --worktree issue fetch-pack one-by-another
-        # which is super slow
-        ARGS=(git reset HEAD)
-        [ ! -z "$QUIET" ] && ARGS+=(-q)
-        ARGS+=(-- "$DIR")
-        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-
-        ARGS=(git restore --worktree)
-        [ ! -z "$QUIET" ] && ARGS+=(-q)
-        ARGS+=(-- "$DIR")
-        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-        [ -f "$1/$DIR" ] && got_file "$1/$DIR"
-        [ -d "$1/$DIR" ] && got_dir "$1/$DIR"
-        echo 'Error: File type not supported.' >&2
-        exit 2
-    fi
+    ARGS=(git reset --hard)
+    [ ! -z "$QUIET" ] && ARGS+=(-q)
+    [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+    [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    ARGS=(git submodule)
+    [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+    ARGS+=(update --init --no-fetch)
+    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    [ ! -z "$JOBS" ] && ARGS+=(--jobs "$JOBS")
+    [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+    [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+    [ ! -z "$FLAT" ] && mv "$1/.git" ".git"
+    got_dir "$1"
 }
 
 # 0. git 2.20+ -> shallow + [filter] -> filter
@@ -272,7 +233,7 @@ if git_new; then
     [ ! -z "$QUIET" ] && ARGS+=(-q)
     [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
     ARGS+=(--depth 1 --no-tags)
-    [ ! -z "$DIR" ] && ARGS+=(--filter blob:none)
+    ARGS+=(--filter blob:none)
     ARGS+=("$REPO" "$BASENAME/.git")
     [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
     set +e

@@ -10,7 +10,7 @@ git-get
     <url> | <user>/<repo>
     [<branch>|<sha1>]
     [-o <target>] [-f|--force] [-F|--rm-rf]
-    [-t [--tag-file=VERSION]]
+    [--preserve-git | -t [--tag-file=VERSION]]
     [--token <token> | --token-file <file>]
     [-- <path>]
 EOF
@@ -38,6 +38,7 @@ VERBOSE=
 FORCE=
 FORCE_DIR=
 OUTPUT=
+PRESERVE=
 TAG=
 TAG_FILE=
 DIR=
@@ -74,11 +75,17 @@ while [ $# -gt 0 ]; do
             OUTPUT="-"
             shift
             ;;
+        --preserve-git)
+            PRESERVE=YES
+            shift
+            ;;
         -t|--tag)
+            PRESERVE=
             TAG=YES
             shift
             ;;
         --tag-file)
+            PRESERVE=
             TAG=YES
             TAG_FILE="$2"
             shift
@@ -191,6 +198,8 @@ if [ ! -z "$VERBOSE" ]; then
     printf 'FORCE=%q\n' "$FORCE" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
+    printf 'PRESERVE=%q\n' "$PRESERVE" >&2
+    printf 'TAG=%q\n' "$TAG" >&2
     printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
     printf 'GITHUB=%q\n' "$GITHUB" >&2
     printf 'GH_REPO=%q\n' "$GH_REPO" >&2
@@ -280,9 +289,10 @@ got_repo() {
     if [ -z "$DIR" ]; then
         ARGS=(git reset --hard)
         [ ! -z "$QUIET" ] && ARGS+=(-q)
+        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-        mv "$1/.git" ".git"
+        [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
         got_dir "$1" "$2" && exit 0
     else
         # git restore --worktree issue fetch-pack one-by-another
@@ -290,12 +300,14 @@ got_repo() {
         ARGS=(git reset HEAD)
         [ ! -z "$QUIET" ] && ARGS+=(-q)
         ARGS+=(-- "$DIR")
+        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
         ARGS=(git restore --worktree)
         [ ! -z "$QUIET" ] && ARGS+=(-q)
         ARGS+=(-- "$DIR")
+        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
         [ -f "$1/$DIR" ] && got_file "$1/$DIR" "$2"
