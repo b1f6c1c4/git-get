@@ -2,3 +2,7 @@
 	path = sub
 	url = https://github.com/b1f6c1c4/git-get.git
 	branch = example-repo0
+[submodule "repo1"]
+	path = xsub
+	url = git@github.com:b1f6c1c4/git-get
+	branch = example-repo1
