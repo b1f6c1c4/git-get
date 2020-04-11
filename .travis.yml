@@ -1,0 +1,19 @@
+language: minimal
+os: linux
+dist: bitonic
+
+branches:
+  only:
+    - master
+
+before_install:
+  - make clean
+
+after_install:
+  - git version
+
+script:
+  - make test
+
+notification:
+  email: false

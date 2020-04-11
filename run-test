@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -euo pipefail
+
+FILE="$(realpath "$1")"
+
+export PATH="$(realpath "$(dirname "$0")"):$PATH"
+
+WORK_DIR="$(realpath "$(mktemp -d)")"
+finish() {
+    cd /
+    rm -rf "$WORK_DIR"
+}
+trap finish EXIT
+
+(
+cd "$WORK_DIR"
+set -euxo pipefail
+source "$FILE"
+)
+cd /
+rmdir "$WORK_DIR"
