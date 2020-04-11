@@ -1,0 +1,4 @@
+[submodule "repo0"]
+	path = sub
+	url = git@github.com:b1f6c1c4/git-get
+	branch = example-repo0
