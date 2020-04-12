@@ -1,5 +1,7 @@
 # git-get: Download Something from GitHub
 
+[![Test Status](https://travis-ci.com/b1f6c1c4/git-get.svg?branch=master)](https://travis-ci.com/b1f6c1c4/git-get)
+
 ## Usage
 
 ```bash

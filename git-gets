@@ -6,6 +6,12 @@ else
     RAW="$RAW"
 fi
 
+if [ -z "$GH_USE_HTTPS" ]; then
+    GH_USE_HTTPS=
+else
+    GH_USE_HTTPS="$GH_USE_HTTPS"
+fi
+
 set -euo pipefail
 
 usage()
@@ -137,7 +143,11 @@ elif [[ "${POSITIONAL[0]}" =~ ^.*/.*/.*$ ]]; then
 else
     GITHUB=YES
     GH_REPO="${POSITIONAL[0]}"
-    REPO="git@github.com:${POSITIONAL[0]}.git"
+    if [ ! -z "$GH_USE_HTTPS" ]; then
+        REPO="https://github.com/${POSITIONAL[0]}.git"
+    else
+        REPO="git@github.com:${POSITIONAL[0]}.git"
+    fi
 fi
 
 BASENAME="$(basename "$REPO")"

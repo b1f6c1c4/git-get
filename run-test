@@ -4,6 +4,7 @@ set -euo pipefail
 
 FILE="$(realpath "$1")"
 
+export GH_USE_HTTPS=YES
 export PATH="$(realpath "$(dirname "$0")"):$PATH"
 
 WORK_DIR="$(realpath "$(mktemp -d)")"
