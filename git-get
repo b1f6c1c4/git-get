@@ -173,6 +173,12 @@ else
     fi
 fi
 
+ODIR=
+while [ ! "$DIR" = "$ODIR" ]; do
+    ODIR="$DIR"
+    DIR="$(printf '%s' "$DIR" | sed -E 's_//_/_g; s_/\./_/_g; s_[^/]+/\.\./_/_g; s_/$__g; s_^/__g; s_/\.$__g; s_^\./__g')"
+done
+
 if [ ! -z "$DIR" ]; then
     BASENAME="$(basename "$DIR")"
 else
@@ -327,6 +333,8 @@ got_dir() {
 got_repo() {
     set -e
     git --git-dir="$1/.git" config --bool core.bare false
+    git --git-dir="$1/.git" config core.repositoryformatversion 0
+
     if [ -z "$DIR" ]; then
         ARGS=(git reset --hard)
         [ ! -z "$QUIET" ] && ARGS+=(-q)
@@ -336,6 +344,47 @@ got_repo() {
         [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
         got_dir "$1" "$2" && exit 0
     else
+        P="$(git --git-dir="$1/.git" ls-tree HEAD -- "$DIR" | cut -d $'\t' -f 2)"
+        T="$(git --git-dir="$1/.git" ls-tree HEAD -- "$DIR" | cut -d ' ' -f 2)"
+        [ ! -z "$VERBOSE" ] && printf 'Checking %q -> %s (%q) \n' "$DIR" "$T" "$P" >&2
+        if [ "$T" = "commit" ]; then
+            ARGS=(git restore --source=HEAD --staged --worktree)
+            [ ! -z "$QUIET" ] && ARGS+=(-q)
+            ARGS+=(-- ".gitmodules" "$P")
+            [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+            [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+
+            ARGS=(git submodule)
+            [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+            ARGS+=(init)
+            [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+            [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+
+            while IFS= read -r -u 3 line; do
+                PA="$(git config --file "$1/.gitmodules" "submodule.$line.path")"
+                URL="$(git config --file "$1/.git/config" "submodule.$line.url")"
+                SSHA1="$(git --git-dir="$1/.git" ls-files -s "$PA" | cut -d ' ' -f2)"
+                [ ! -z "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
+                [ ! "$PA" = "$P" ] && continue
+                ARGS=("$0")
+                [ ! -z "$VERBOSE" ] && ARGS+=(--verbose)
+                [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+                ARGS+=("$URL" "$SSHA1")
+                ARGS+=(-o "$OUTPUT")
+                [ ! -z "$FORCE" ] && ARGS+=(--force)
+                [ ! -z "$FORCE_DIR" ] && ARGS+=(--force-dir)
+                [ ! -z "$TAG_FILE" ] && ARGS+=(--tag-file "$TAG_FILE")
+                [ ! "$P" = "$DIR" ] && ARGS+=(-- "${DIR#$P/}")
+                # TODO: token
+                [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
+                [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+                "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+                exit "$?"
+            done 3< <(awk -F '"' '/^\[submodule / { print $2; }' "$1/.git/config")
+        fi
+
         # git restore --worktree issue fetch-pack one-by-another
         # which is super slow
         ARGS=(git reset HEAD)
@@ -359,12 +408,12 @@ got_repo() {
     fi
 }
 
-# TODO: recursive into submodules?
 # 0. git 2.20+ -> shallow + [filter] -> filter
 if git_new; then
     mkdir -p "$BASENAME"
     ARGS=(git clone --bare)
     [ ! -z "$QUIET" ] && ARGS+=(-q)
+    [ -z "$QUIET" ] && ARGS+=(--progress)
     [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
     ARGS+=(--depth 1 --no-tags)
     [ ! -z "$DIR" ] && ARGS+=(--filter blob:none)
@@ -380,6 +429,7 @@ if git_new; then
     if [ ! -z "$(grep 'warning: Could not find remote branch' clone.log)" ]; then
         ARGS=(git clone --mirror --filter tree:0)
         [ ! -z "$QUIET" ] && ARGS+=(-q)
+        [ -z "$QUIET" ] && ARGS+=(--progress)
         ARGS+=("$REPO" "$BASENAME/.git")
         [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         set +e
@@ -398,7 +448,6 @@ if git_new; then
     rm -rf "$BASENAME"
 fi
 
-# TODO: recursive into submodules?
 # 1. GitHub / Path -> api.github.com/.../contents
 if [ ! -z "$GITHUB" ] && [ ! -z "$DIR" ]; then
     ARGS=(curl -f -o file)

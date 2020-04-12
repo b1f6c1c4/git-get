@@ -358,6 +358,7 @@ if git_new; then
     mkdir -p "$BASENAME"
     ARGS=(git clone --bare)
     [ ! -z "$QUIET" ] && ARGS+=(-q)
+    [ -z "$QUIET" ] && ARGS+=(--progress)
     [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
     ARGS+=(--depth 1 --no-tags)
     ARGS+=(--filter blob:none)
@@ -379,6 +380,7 @@ if git_new; then
     if [ ! -z "$(grep 'warning: Could not find remote branch' clone.log)" ]; then
         ARGS=(git clone --mirror --filter tree:0)
         [ ! -z "$QUIET" ] && ARGS+=(-q)
+        [ -z "$QUIET" ] && ARGS+=(--progress)
         ARGS+=("$REPO" "$BASENAME/.git")
         [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         set +e

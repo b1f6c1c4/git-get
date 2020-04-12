@@ -1,0 +1,13 @@
+R="$(git-get b1f6c1c4/git-get example-repo2 -- xsub/sub/ )"
+
+[ -z "$R" ]
+[ -L git-get/link ]
+[ -x git-get/file ]
+[ -d git-get/dir ]
+[ -f git-get/dir/file-in-dir ]
+
+rm git-get/dir/file-in-dir
+rmdir git-get/dir
+rm git-get/file
+unlink git-get/link
+rmdir git-get
