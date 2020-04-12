@@ -6,46 +6,46 @@
 
 ```bash
 git-get <url>
-# Equivalent to:
-#     git clone --depth=1 <url> && cd <repo>
-#     rm -rf .git
+# is 1x~10000x faster than:
+#     git clone <url> repo
+#     rm -rf repo/.git
 
 git-get <url> -- <file>|<dir>
-# Equivalent to:
-#     git clone --depth=1 <url>
-#     mv <repo>/<file> <file> && rm -rf <repo>
-# ... and is 1x~10000x faster
+# is 1x~1000000x faster than:
+#     git clone <url> repo
+#     git -C repo submodule update --init --recursive
+#     mv repo/<file> <file> && rm -rf repo
 
 git-get <url> <commit> -- <file>|<dir>
-# Equivalent to:
-#     git clone <url> && cd <repo>
-#     (cd <repo> && git fetch --all && git switch --detach <commit>)
-#     rm -rf <repo>/.git
-# ... and is 1x~1000000000x faster
+# is 1x~1000000000x faster than:
+#     git clone --mirror <url> repo
+#     git -C repo switch --detach <commit>
+#     rm -rf repo/.git
 
-git-gets <url>
-# Equivalent to:
-#     git clone --depth=1 <url> && cd <repo>
-#     git submodule init --recursive
-#     git submodule update --recursive
-# ... and is 1x~10000000x faster
+git-gets <url> <commit> -P
+# is 1x~10000000x faster than:
+#     git clone --mirror <url> repo
+#     git -C repo switch --detach <commit>
+#     git -C repo submodule update --init --recursive
+
+git-gets <url> <commit> -P --flat
+# is 1x~10000000x faster than:
+#     git clone --mirror <url> repo
+#     git -C repo switch --detach <commit>
+#     git -C repo submodule update --init --recursive
+#     rm -rf repo/**/.git
 ```
 
 ```bash
-git-get
-    [-v|--verbose|-q|--quiet]
-    <url> | <user>/<repo>
-    [<branch>|<sha1>]
-    [-o <target>] [-f|--force] [-F|--rm-rf]
-    [--preserve-git | -t [--tag-file=VERSION]]
-    [-- <path>]
+git-get [-v|--verbose|-q|--quiet]
+    <url> | <user>/<repo> [<branch>|<sha1>]
+    [-o <target> |--output=<target>] [-f|--force] [-F|--rm-rf]
+    [--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 
-git-gets
-    [-v|--verbose|-q|--quiet]
-    <url> | <user>/<repo>
-    [<branch>|<sha1>]
-    [[-o] <target>] [-F|--rm-rf]
-    [--flat [--tag-file=VERSION]]
+git-gets [-v|--verbose|-q|--quiet]
+    <url> | <user>/<repo> [<branch>|<sha1>]
+    [[-o|--output] <target>] [-F|--rm-rf]
+    [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
 ```
 
 ## Install
@@ -69,6 +69,11 @@ git-get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/bin/git-gets
 git-get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
 git-get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
 ```
+
+## Requirements
+
+* git **2.20+**
+* bash
 
 ## License
 

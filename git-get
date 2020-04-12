@@ -23,14 +23,10 @@ set -euo pipefail
 usage()
 {
     cat - <<EOF
-git-get
-    [-v|--verbose|-q|--quiet]
-    <url> | <user>/<repo>
-    [<branch>|<sha1>]
-    [-o <target>] [-f|--force] [-F|--rm-rf]
-    [--preserve-git | -t [--tag-file=VERSION]]
-    [--token <token> | --token-file <file>]
-    [-- <path>]
+git-get [-v|--verbose|-q|--quiet]
+    <url> | <user>/<repo> [<branch>|<sha1>]
+    [-o <target> |--output=<target>] [-f|--force] [-F|--rm-rf]
+    [--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 EOF
 }
 
@@ -49,8 +45,6 @@ fakerealpath() {
     fi
 }
 
-TOKEN=
-TOKEN_FILE="$HOME/.github-token"
 QUIET=
 VERBOSE=
 FORCE=
@@ -108,18 +102,6 @@ while [ $# -gt 0 ]; do
             shift
             shift
             ;;
-        --token)
-            TOKEN="$2"
-            TOKEN_FILE=""
-            shift
-            shift
-            ;;
-        --token-file)
-            TOKEN=""
-            TOKEN_FILE="$2"
-            shift
-            shift
-            ;;
         --)
             DIR="$2"
             shift
@@ -143,6 +125,10 @@ while [ $# -gt 0 ]; do
 done
 if [ ! -z "$PRESERVE" ] && [ ! -z "$TAG" ]; then
     echo "Error: Conflict: --preserve-git and --tag/--tag-file" >&2
+    exit 1
+fi
+if [ ! -z "$PRESERVE" ] && [ ! -z "$DIR" ]; then
+    echo "Error: Conflict: --preserve-git and -- <path>" >&2
     exit 1
 fi
 
@@ -212,10 +198,6 @@ else
     TAG_FILE=
 fi
 
-if [ -z "$TOKEN" ] && [ -f "$TOKEN_FILE" ]; then
-    TOKEN="$(cat "$TOKEN_FILE")"
-fi
-
 which git >/dev/null
 if [ $? -ne 0 ]; then
     echo "Error: git(1) not found"
@@ -228,11 +210,6 @@ if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
 if [ ! -z "$VERBOSE" ]; then
-    if [ ! -z "$TOKEN" ]; then
-        printf 'TOKEN=%s\n' "********" >&2
-    else
-        printf 'TOKEN=%s\n' "" >&2
-    fi
     printf 'OCWD=%q\n' "$OCWD" >&2
     printf 'FORCE=%q\n' "$FORCE" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
@@ -405,7 +382,6 @@ got_repo() {
                 [ ! -z "$FORCE_DIR" ] && ARGS+=(--force-dir)
                 [ ! -z "$TAG_FILE" ] && ARGS+=(--tag-file "$TAG_FILE")
                 [ ! "$P" = "$DIR" ] && ARGS+=(-- "${DIR#$P/}")
-                # TODO: token
                 [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
                 [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
                 if [ -z "$PREV_TAGS" ]; then
@@ -479,26 +455,6 @@ if git_new; then
         set -e
     fi
     rm -rf "$BASENAME"
-fi
-
-# 1. GitHub / Path -> api.github.com/.../contents
-if [ ! -z "$GITHUB" ] && [ ! -z "$DIR" ]; then
-    ARGS=(curl -f -o file)
-    ARGS+=(-w '%{content_type}')
-    ARGS+=(-H 'Accept: application/vnd.github.v3.raw')
-    [ ! -z "$TOKEN" ] && ARGS+=(-H "Authorization: token $TOKEN")
-    [ ! -z "$QUIET" ] && ARGS+=(-s)
-    [ ! -z "$VERBOSE" ] && ARGS+=(-S)
-    ARGS+=("https://api.github.com/repos/$GH_REPO/contents/$DIR?ref=$BRANCH")
-    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-    set +e
-    RES="$("${ARGS[@]}")"
-    if [ "$?" -eq 0 ]; then
-        set -e
-        [[ "$RES" =~ ^application/vnd.github.v3.raw ]] && got_file file "$BRANCH"
-        # [[ "$RES" =~ ^application/json ]] && IS_DIR=YES
-    fi
-    set -e
 fi
 
 printf 'Error: No viable method.\n' >&2

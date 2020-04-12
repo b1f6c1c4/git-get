@@ -17,13 +17,10 @@ set -euo pipefail
 usage()
 {
     cat - <<EOF
-git-gets
-    [-v|--verbose|-q|--quiet]
-    <url> | <user>/<repo>
-    [<branch>|<sha1>]
-    [[-o] <target>] [-F|--rm-rf]
-    [--flat [--tag-file=VERSION]]
-    [-j<N>] [-c|--confirm]
+git-gets [-v|--verbose|-q|--quiet]
+    <url> | <user>/<repo> [<branch>|<sha1>]
+    [[-o|--output] <target>] [-F|--rm-rf]
+    [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
 EOF
 }
 
@@ -48,7 +45,7 @@ FORCE_DIR=
 OUTPUT=
 FLAT=
 TAG_FILE=
-JOBS=
+PARALLEL=
 CONFIRM=
 POSITIONAL=()
 while [ $# -gt 0 ]; do
@@ -89,9 +86,8 @@ while [ $# -gt 0 ]; do
             shift
             shift
             ;;
-        -j|--jobs)
-            JOBS="$2"
-            shift
+        -P|--parallel)
+            PARALLEL=YES
             shift
             ;;
         -c|--confirm)
@@ -100,9 +96,9 @@ while [ $# -gt 0 ]; do
             ;;
         *)
             if [[ "$1" =~ ^-j ]]; then
-                JOBS="${1#-j}"
+                PARALLEL="${1#-j}"
             elif [[ "$1" =~ ^--jobs= ]]; then
-                JOBS="${1#--jobs=}"
+                PARALLEL="${1#--jobs=}"
             elif [[ "$1" =~ ^--tag-file= ]]; then
                 FLAT=YES
                 TAG_FILE="${1#--tag-file=}"
@@ -117,8 +113,8 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
-if [ ! -z "$JOBS" ] && [ ! -z "$CONFIRM" ]; then
-    echo "Warning: With --jobs, --confirm only works for first-level submodules." >&2
+if [ ! -z "$PARALLEL" ] && [ ! -z "$CONFIRM" ]; then
+    echo "Warning: With --parallel, --confirm only works for first-level submodules." >&2
     PMT="Proceed? (y/n) ... "
     while true; do
         read -p "$PMT" -n 1 -r <&2
@@ -213,7 +209,7 @@ if [ ! -z "$VERBOSE" ]; then
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
     printf 'FLAT=%q\n' "$FLAT" >&2
     printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
-    printf 'JOBS=%q\n' "$JOBS" >&2
+    printf 'PARALLEL=%q\n' "$PARALLEL" >&2
     printf 'CONFIRM=%q\n' "$CONFIRM" >&2
     printf 'GITHUB=%q\n' "$GITHUB" >&2
     printf 'GH_REPO=%q\n' "$GH_REPO" >&2
@@ -308,29 +304,25 @@ got_repo() {
         ARGS=("$0")
         [ ! -z "$VERBOSE" ] && ARGS+=(--verbose)
         [ ! -z "$QUIET" ] && ARGS+=(--quiet)
-        [ -z "$JOBS" ] && [ ! -z "$CONFIRM" ] && ARGS+=(--confirm)
+        [ ! -z "$PARALLEL" ] && ARGS+=(--parallel)
+        [ -z "$PARALLEL" ] && [ ! -z "$CONFIRM" ] && ARGS+=(--confirm)
         ARGS+=(-o "$1/$PA" "$URL" "$SSHA1")
+        GO=YES
         if [ ! -z "$CONFIRM" ]; then
             PMT="$(printf 'Will clone %s from %s, proceed? (Y/n) ... ' "$PA" "$URL" >&4)"
             while true; do
                 read -p "$PMT" -n 1 -r
                 case "$REPLY" in
                     "")
-                        [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
-                        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-                        RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
                         break
                         ;;
                     y|Y)
                         printf '\n' >&2
-                        [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
-                        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-                        RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
                         break
                         ;;
                     n|N)
                         printf '\n' >&2
-                        [ -z "$QUIET" ] && printf '%s %s %s %s\n' '---' "$PA" "$URL" "$SSHA1">&2
+                        GO=
                         break
                         ;;
                     *)
@@ -338,13 +330,21 @@ got_repo() {
                         ;;
                 esac
             done
-        else
+        fi
+        if [ ! -z "$GO" ]; then
             [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
-            env RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+            [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            if [ -z "$PARALLEL" ]; then
+                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+            else
+                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2 &
+            fi
+        else
+            [ -z "$QUIET" ] && printf '%s %s %s %s\n' '---' "$PA" "$URL" "$SSHA1">&2
         fi
     done 3< <(awk -F '"' '/^\[submodule / { print $2; }' "$1/.git/config")
 
-    [ ! -z "$JOBS" ] && ARGS+=(--jobs "$JOBS")
+    wait
     if [ -z "$RAW" ]; then
         ARGS=(git submodule)
         [ ! -z "$QUIET" ] && ARGS+=(--quiet)
