@@ -1,0 +1,11 @@
+mkdir dir
+touch dir/old-file
+
+R="$(git-get b1f6c1c4/git-get example-repo2 -F -- dir)"
+
+[ -z "$R" ]
+[ -d dir ]
+[ -f dir/file-in-dir ]
+
+rm dir/file-in-dir
+rmdir dir

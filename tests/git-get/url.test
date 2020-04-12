@@ -1,0 +1,7 @@
+R="$(git-get https://github.com/b1f6c1c4/git-get example-repo2 -- file)"
+
+[ -z "$R" ]
+[ -f file ]
+[ -x file ]
+
+rm file

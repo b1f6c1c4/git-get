@@ -1,0 +1,11 @@
+mkdir dir
+touch dir/old-file
+
+R="$(git-get b1f6c1c4/git-get example-repo2 -- dir || echo good)"
+
+[ "$R" = "good" ]
+[ -d dir ]
+[ -f dir/old-file ]
+
+rm dir/old-file
+rmdir dir

@@ -11,3 +11,5 @@ clean:
 	rm -rf report/
 
 .PHONY: test clean
+
+.DELETE_ON_ERROR: $(REPORTS)

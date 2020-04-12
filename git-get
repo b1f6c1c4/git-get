@@ -69,6 +69,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         -F|--rm-rf)
+            FORCE=YES
             FORCE_DIR=YES
             shift
             ;;
@@ -82,16 +83,26 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --preserve-git)
+            if [ ! -z "$TAG" ]; then
+                echo "Error: Conflict: --preserve-git and --tag/--tag-file" >&2
+                exit 1
+            fi
             PRESERVE=YES
             shift
             ;;
         -t|--tag)
-            PRESERVE=
+            if [ ! -z "$PRESERVE" ]; then
+                echo "Error: Conflict: --preserve-git and --tag/--tag-file" >&2
+                exit 1
+            fi
             TAG=YES
             shift
             ;;
         --tag-file)
-            PRESERVE=
+            if [ ! -z "$PRESERVE" ]; then
+                echo "Error: Conflict: --preserve-git and --tag/--tag-file" >&2
+                exit 1
+            fi
             TAG=YES
             TAG_FILE="$2"
             shift
@@ -169,6 +180,9 @@ else
 fi
 if [ -z "$OUTPUT" ]; then
     OUTPUT="$BASENAME"
+    DEF_OUTPUT=YES
+else
+    DEF_OUTPUT=
 fi
 
 if [ ! -z "$TAG" ]; then
@@ -191,9 +205,6 @@ fi
 
 git_new || ([ ! -z "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
 
-if [ ! -z "$FORCE_DIR" ]; then
-    FORCE=YES
-fi
 if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
@@ -208,6 +219,7 @@ if [ ! -z "$VERBOSE" ]; then
     printf 'FORCE=%q\n' "$FORCE" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
+    printf 'DEF_OUTPUT=%q\n' "$DEF_OUTPUT" >&2
     printf 'PRESERVE=%q\n' "$PRESERVE" >&2
     printf 'TAG=%q\n' "$TAG" >&2
     printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
@@ -232,7 +244,11 @@ cd "$WORK_DIR"
 got_file() {
     set -e
     if [ "$OUTPUT" = "-" ]; then
-        cat "$1"
+        if [ "$3" = "LINK" ]; then
+            readlink "$1"
+        else
+            cat "$1"
+        fi
     elif [ -f "$OUTPUT" ]; then
         if [ ! -z "$FORCE" ]; then
             [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
@@ -241,6 +257,16 @@ got_file() {
             printf 'Error: File %q exists\n' "$OUTPUT" >&2
             exit 1
         fi
+    elif [ -d "$OUTPUT" ]; then
+        if [ ! -z "$DEF_OUTPUT" ]; then
+            printf 'Error: There is a directory %q\n' "$OUTPUT" >&2
+            exit 1
+        else
+            mv "$1" "$OUTPUT"
+        fi
+    elif [ -e "$OUTPUT" ]; then
+        printf 'Error: Weird file %q exists\n' "$OUTPUT" >&2
+        exit 1
     else
         mv "$1" "$OUTPUT"
     fi
@@ -266,7 +292,8 @@ got_dir() {
             [ -z "$QUIET" ] && printf 'Warning: Overriding directory %q\n' "$OUTPUT" >&2
             rm -rf "$OUTPUT" && mv "$1" "$OUTPUT"
         else
-            mv "$1" "$OUTPUT"
+            printf 'Error: Directory %q exists\n' "$OUTPUT" >&2
+            exit 1
         fi
     elif [ -f "$OUTPUT" ]; then
         if [ ! -z "$FORCE" ]; then
@@ -276,6 +303,9 @@ got_dir() {
             printf 'Error: File %q exists\n' "$OUTPUT" >&2
             exit 1
         fi
+    elif [ -e "$OUTPUT" ]; then
+        printf 'Error: Weird file %q exists\n' "$OUTPUT" >&2
+        exit 1
     else
         mv "$1" "$OUTPUT"
     fi
@@ -322,6 +352,7 @@ got_repo() {
         [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
         [ -f "$1/$DIR" ] && got_file "$1/$DIR" "$2"
         [ -d "$1/$DIR" ] && got_dir "$1/$DIR" "$2"
+        [ -L "$1/$DIR" ] && got_file "$1/$DIR" "$2" LINK
         echo 'Error: File type not supported.' >&2
         exit 2
     fi

@@ -1,0 +1,10 @@
+touch file-in-dir
+chmod +x file-in-dir
+
+R="$(git-get b1f6c1c4/git-get example-repo2 -- dir/file-in-dir || echo good)"
+
+[ "$R" = good ]
+[ -f file-in-dir ]
+[ -x file-in-dir ]
+
+rm file-in-dir

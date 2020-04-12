@@ -172,9 +172,6 @@ fi
 
 git_new || ([ ! -z "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
 
-if [ ! -z "$FORCE_DIR" ]; then
-    FORCE=YES
-fi
 if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
@@ -213,16 +210,20 @@ got_dir() {
             [ -z "$QUIET" ] && printf 'Warning: Overriding directory %q\n' "$OUTPUT" >&2
             rm -rf "$OUTPUT" && mv "$1" "$OUTPUT"
         else
-            mv "$1" "$OUTPUT"
+            printf 'Error: Directory %q exists\n' "$OUTPUT" >&2
+            exit 1
         fi
     elif [ -f "$OUTPUT" ]; then
-        if [ ! -z "$FORCE" ]; then
+        if [ ! -z "$FORCE_DIR" ]; then
             [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
             rm -f "$OUTPUT" && mv "$1" "$OUTPUT"
         else
             printf 'Error: File %q exists\n' "$OUTPUT" >&2
             exit 1
         fi
+    elif [ -e "$OUTPUT" ]; then
+        printf 'Error: Weird file %q exists\n' "$OUTPUT" >&2
+        exit 1
     else
         mv "$1" "$OUTPUT"
     fi

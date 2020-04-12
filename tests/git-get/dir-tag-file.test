@@ -3,7 +3,7 @@ R="$(git-get b1f6c1c4/git-get example-repo2 --tag-file tag -- dir)"
 [ -z "$R" ]
 [ -d dir ]
 [ -f dir/file-in-dir ]
-[ "$(cat dir/tag)" = "9a2b64799c0a94cfc5b2dec34fa31a97ebd86e80" ]
+[ "$(cat dir/tag)" = "2dd50b6425c7d79f4695aa69d05467e1a00fc20f" ]
 
 rm dir/tag
 rm dir/file-in-dir

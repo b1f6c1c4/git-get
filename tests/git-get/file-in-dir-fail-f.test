@@ -1,0 +1,8 @@
+mkdir file-in-dir
+
+R="$(git-get b1f6c1c4/git-get example-repo2 -f -- dir/file-in-dir || echo good)"
+
+[ "$R" = good ]
+[ -d file-in-dir ]
+
+rmdir file-in-dir
