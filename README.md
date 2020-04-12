@@ -1,22 +1,23 @@
-# git-get: Download Something from GitHub
+# git-get: Blazingly fast `git clone` alternative
 
 [![Test Status](https://travis-ci.com/b1f6c1c4/git-get.svg?branch=master)](https://travis-ci.com/b1f6c1c4/git-get)
 
-## Usage
+## TL;DR
 
 ```bash
-git-get <url>
+git-get <url> -t
 # is 1x~10000x faster than:
 #     git clone <url> repo
+#     git -C repo rev-parse HEAD > repo/VERSION
 #     rm -rf repo/.git
 
-git-get <url> -- <file>|<dir>
+git-get <url> -o <target> -- <file>
 # is 1x~1000000x faster than:
 #     git clone <url> repo
 #     git -C repo submodule update --init --recursive
-#     mv repo/<file> <file> && rm -rf repo
+#     cp repo/<file> <target> && rm -rf repo
 
-git-get <url> <commit> -- <file>|<dir>
+git-get <url> <commit> -- <file>
 # is 1x~1000000000x faster than:
 #     git clone --mirror <url> repo
 #     git -C repo switch --detach <commit>
@@ -36,6 +37,18 @@ git-gets <url> <commit> -P --flat
 #     rm -rf repo/**/.git
 ```
 
+## Why it is so fast?
+
+It leverages `--depth` and `--filter` to save bandwidth.
+Only the files you actually want (that commit that file) are downloaded.
+No entire development history.
+No entire repository folder.
+Remember, this applies to both parent repo and all sub repos.
+
+## Usage
+
+The CLI is pretty self-explanatory:
+
 ```bash
 git-get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
@@ -50,21 +63,19 @@ git-gets [-v|--verbose|-q|--quiet]
 
 ## Install
 
-Currently only supports bash.
-
 ```bash
-wget -qO- https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/bin/git-get > /dev/null && sudo chmod 755 /usr/bin/git-get
-wget -qO- https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/bin/git-gets > /dev/null && sudo chmod 755 /usr/bin/git-gets
+curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/bin/git-get > /dev/null && sudo chmod 755 /usr/bin/git-get
+curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/bin/git-gets > /dev/null && sudo chmod 755 /usr/bin/git-gets
 # Or, locally:
 mkdir -p ~/.local/bin/
-wget -qO- https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && sudo chmod 755 ~/.local/bin/git-get
-wget -qO- https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && sudo chmod 755 ~/.local/bin/git-gets
+curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && sudo chmod 755 ~/.local/bin/git-get
+curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && sudo chmod 755 ~/.local/bin/git-gets
 ```
 
 Upgrading:
 ```bash
-git-get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/bin/git-get
-git-get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/bin/git-gets
+git-get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/bin/git-get >/dev/null
+git-get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/bin/git-gets >/dev/null
 # Or, locally:
 git-get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
 git-get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
