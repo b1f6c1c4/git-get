@@ -23,7 +23,7 @@ git-gets
     [<branch>|<sha1>]
     [[-o] <target>] [-F|--rm-rf]
     [--flat [--tag-file=VERSION]]
-    [-j<N>] [-c]
+    [-j<N>] [-c|--confirm]
 EOF
 }
 
@@ -89,7 +89,7 @@ while [ $# -gt 0 ]; do
             shift
             shift
             ;;
-        -j)
+        -j|--jobs)
             JOBS="$2"
             shift
             shift
@@ -101,6 +101,15 @@ while [ $# -gt 0 ]; do
         *)
             if [[ "$1" =~ ^-j ]]; then
                 JOBS="${1#-j}"
+            elif [[ "$1" =~ ^--jobs= ]]; then
+                JOBS="${1#--jobs=}"
+            elif [[ "$1" =~ ^--tag-file= ]]; then
+                FLAT=YES
+                TAG_FILE="${1#--tag-file=}"
+            elif [[ "$1" =~ ^--output= ]]; then
+                OUTPUT="${1#--output=}"
+            elif [[ "$1" =~ ^-o= ]]; then
+                OUTPUT="${1#-o=}"
             else
                 POSITIONAL+=("$1")
             fi
@@ -108,6 +117,28 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+if [ ! -z "$JOBS" ] && [ ! -z "$CONFIRM" ]; then
+    echo "Warning: With --jobs, --confirm only works for first-level submodules." >&2
+    PMT="Proceed? (y/n) ... "
+    while true; do
+        read -p "$PMT" -n 1 -r <&2
+        case "$REPLY" in
+            "")
+                ;;
+            y|Y)
+                printf '\n' >&2
+                break
+                ;;
+            n|N)
+                printf '\n' >&2
+                exit 2
+                ;;
+            *)
+                printf '\n' >&2
+                ;;
+        esac
+    done
+fi
 
 if [ "${#POSITIONAL[@]}" -eq 0 ]; then
     echo "Error: Must specify <repo-url> (any git remote) or <user>/<repo> (GitHub)"
@@ -175,6 +206,7 @@ git_new || ([ ! -z "$QUIET" ] && printf 'Warning: You should upgrade your git (c
 if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
+OCWD="$PWD"
 if [ ! -z "$VERBOSE" ]; then
     printf 'RAW=%q\n' "$RAW" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
@@ -228,6 +260,16 @@ got_dir() {
         mv "$1" "$OUTPUT"
     fi
     [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
+    [ -z "$QUIET" ] && printf 'tag = %s\n' "$2" >&2
+    if [ ! -z "$TAG_FILE" ]; then
+        if [[ "$TAG_FILE" =~ ^/ ]]; then
+            printf '%s\n' "$2" >"$TAG_FILE"
+        elif [ "$OUTPUT" = "-" ]; then
+            printf '%s\n' "$2" >"$OCWD/$TAG_FILE"
+        else
+            printf '%s\n' "$2" >"$OUTPUT/$TAG_FILE"
+        fi
+    fi
     exit 0
 }
 
@@ -249,8 +291,11 @@ got_repo() {
     [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
     [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
-    awk -F '"' '/^\[submodule / { print $2; }' "$1/.git/config" | (
-    while IFS= read -r line; do
+    if [ -z "$RAW" ]; then
+        exec 4>&2
+    fi
+
+    while IFS= read -r -u 3 line; do
         PA="$(git config --file "$1/.gitmodules" "submodule.$line.path")"
         URL="$(git config --file "$1/.git/config" "submodule.$line.url")"
         SSHA1="$(git --git-dir="$1/.git" ls-files -s "$PA" | cut -d ' ' -f2)"
@@ -259,23 +304,24 @@ got_repo() {
         ARGS=("$0")
         [ ! -z "$VERBOSE" ] && ARGS+=(--verbose)
         [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+        [ -z "$JOBS" ] && [ ! -z "$CONFIRM" ] && ARGS+=(--confirm)
         ARGS+=(-o "$1/$PA" "$URL" "$SSHA1")
         if [ ! -z "$CONFIRM" ]; then
-            PMT="$(printf 'Will clone %s from %s, proceed? (Y/n) ...' "$PA" "$URL")"
+            PMT="$(printf 'Will clone %s from %s, proceed? (Y/n) ... ' "$PA" "$URL" >&4)"
             while true; do
-                read -p "$PMT" -n 1 -r <&2
+                read -p "$PMT" -n 1 -r
                 case "$REPLY" in
                     "")
                         [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
                         [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-                        env RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+                        RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
                         break
                         ;;
                     y|Y)
                         printf '\n' >&2
                         [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
                         [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-                        env RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+                        RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
                         break
                         ;;
                     n|N)
@@ -292,8 +338,9 @@ got_repo() {
             [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
             env RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
         fi
-    done)
-    # [ ! -z "$JOBS" ] && ARGS+=(--jobs "$JOBS")
+    done 3< <(awk -F '"' '/^\[submodule / { print $2; }' "$1/.git/config")
+
+    [ ! -z "$JOBS" ] && ARGS+=(--jobs "$JOBS")
     if [ -z "$RAW" ]; then
         ARGS=(git submodule)
         [ ! -z "$QUIET" ] && ARGS+=(--quiet)
@@ -303,7 +350,7 @@ got_repo() {
         [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
     fi
     [ ! -z "$FLAT" ] && mv "$1/.git" ".git"
-    got_dir "$1"
+    got_dir "$1" "$2"
 }
 
 # 0. git 2.20+ -> shallow + [filter] -> filter
@@ -326,7 +373,7 @@ if git_new; then
     fi
     if [ "$R" -eq 0 ]; then
         set -e
-        got_repo "$BASENAME"
+        got_repo "$BASENAME" "$(git --git-dir="$BASENAME/.git" rev-parse HEAD)"
     fi
     set -e
     if [ ! -z "$(grep 'warning: Could not find remote branch' clone.log)" ]; then
@@ -342,7 +389,7 @@ if git_new; then
                 [ -z "$QUIET" ] && printf 'Got SHA1: %q\n' "$SHA1" >&2
                 set -e
                 git --git-dir="$BASENAME/.git" update-ref --no-deref HEAD "$SHA1"
-                got_repo "$BASENAME"
+                got_repo "$BASENAME" "$SHA1"
             fi
         fi
         set -e

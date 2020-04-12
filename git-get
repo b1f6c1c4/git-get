@@ -83,26 +83,14 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --preserve-git)
-            if [ ! -z "$TAG" ]; then
-                echo "Error: Conflict: --preserve-git and --tag/--tag-file" >&2
-                exit 1
-            fi
             PRESERVE=YES
             shift
             ;;
         -t|--tag)
-            if [ ! -z "$PRESERVE" ]; then
-                echo "Error: Conflict: --preserve-git and --tag/--tag-file" >&2
-                exit 1
-            fi
             TAG=YES
             shift
             ;;
         --tag-file)
-            if [ ! -z "$PRESERVE" ]; then
-                echo "Error: Conflict: --preserve-git and --tag/--tag-file" >&2
-                exit 1
-            fi
             TAG=YES
             TAG_FILE="$2"
             shift
@@ -127,11 +115,24 @@ while [ $# -gt 0 ]; do
             break
             ;;
         *)
-            POSITIONAL+=("$1")
+            if [[ "$1" =~ ^--tag-file= ]]; then
+                FLAT=YES
+                TAG_FILE="${1#--tag-file=}"
+            elif [[ "$1" =~ ^--output= ]]; then
+                OUTPUT="${1#--output=}"
+            elif [[ "$1" =~ ^-o= ]]; then
+                OUTPUT="${1#-o=}"
+            else
+                POSITIONAL+=("$1")
+            fi
             shift
             ;;
     esac
 done
+if [ ! -z "$PRESERVE" ] && [ ! -z "$TAG" ]; then
+    echo "Error: Conflict: --preserve-git and --tag/--tag-file" >&2
+    exit 1
+fi
 
 if [ "$#" -gt 0 ]; then
     echo "Error: Only one path allowed!" >&2

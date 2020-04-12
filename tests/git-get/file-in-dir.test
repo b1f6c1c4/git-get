@@ -1,6 +1,6 @@
 mkdir d
 
-R="$(git-get b1f6c1c4/git-get example-repo2 -o d -- dir/file-in-dir)"
+R="$(git-get b1f6c1c4/git-get example-repo2 -o=d -- dir/file-in-dir)"
 
 [ -z "$R" ]
 [ -d d ]

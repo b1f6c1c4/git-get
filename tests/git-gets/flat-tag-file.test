@@ -1,0 +1,18 @@
+R="$(git-gets b1f6c1c4/git-get example-repo2 --tag-file tag)"
+
+[ -z "$R" ]
+[ "$(cat git-get/tag)" = "2dd50b6425c7d79f4695aa69d05467e1a00fc20f" ]
+[ -L git-get/link ]
+[ -L git-get/sub/link ]
+[ -L git-get/xsub/link ]
+[ -L git-get/xsub/sub/link ]
+[ -x git-get/file ]
+[ -x git-get/sub/file ]
+[ -x git-get/xsub/file ]
+[ -x git-get/xsub/sub/file ]
+[ -f git-get/dir/file-in-dir ]
+[ -f git-get/sub/dir/file-in-dir ]
+[ -f git-get/xsub/dir/file-in-dir ]
+[ -f git-get/xsub/sub/dir/file-in-dir ]
+
+rm -rf git-get

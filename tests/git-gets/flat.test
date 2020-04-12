@@ -1,0 +1,17 @@
+R="$(git-gets b1f6c1c4/git-get example-repo2 --flat)"
+
+[ -z "$R" ]
+[ -L git-get/link ]
+[ -L git-get/sub/link ]
+[ -L git-get/xsub/link ]
+[ -L git-get/xsub/sub/link ]
+[ -x git-get/file ]
+[ -x git-get/sub/file ]
+[ -x git-get/xsub/file ]
+[ -x git-get/xsub/sub/file ]
+[ -f git-get/dir/file-in-dir ]
+[ -f git-get/sub/dir/file-in-dir ]
+[ -f git-get/xsub/dir/file-in-dir ]
+[ -f git-get/xsub/sub/dir/file-in-dir ]
+
+rm -rf git-get
