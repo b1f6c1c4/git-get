@@ -6,6 +6,18 @@ else
     GH_USE_HTTPS="$GH_USE_HTTPS"
 fi
 
+if [ -z "$PREV_TAGS" ]; then
+    PREV_TAGS=
+else
+    PREV_TAGS="$PREV_TAGS"
+fi
+
+if [ -z "$OCWD" ]; then
+    OCWD="$PWD"
+else
+    OCWD="$OCWD"
+fi
+
 set -euo pipefail
 
 usage()
@@ -116,7 +128,7 @@ while [ $# -gt 0 ]; do
             ;;
         *)
             if [[ "$1" =~ ^--tag-file= ]]; then
-                FLAT=YES
+                TAG=YES
                 TAG_FILE="${1#--tag-file=}"
             elif [[ "$1" =~ ^--output= ]]; then
                 OUTPUT="${1#--output=}"
@@ -215,7 +227,6 @@ git_new || ([ ! -z "$QUIET" ] && printf 'Warning: You should upgrade your git (c
 if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
-OCWD="$PWD"
 if [ ! -z "$VERBOSE" ]; then
     if [ ! -z "$TOKEN" ]; then
         printf 'TOKEN=%s\n' "********" >&2
@@ -236,6 +247,7 @@ if [ ! -z "$VERBOSE" ]; then
     printf 'BRANCH=%q\n' "$BRANCH" >&2
     printf 'DIR=%q\n' "$DIR" >&2
     printf 'BASENAME=%q\n' "$BASENAME" >&2
+    printf 'PREV_TAGS=%q\n' "$PREV_TAGS" >&2
 fi
 
 WORK_DIR="$(realpath "$(mktemp -d)")"
@@ -278,13 +290,21 @@ got_file() {
         mv "$1" "$OUTPUT"
     fi
     [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
-    [ -z "$QUIET" ] && printf 'tag = %s\n' "$2" >&2
-    if [ ! -z "$TAG" ]; then
+    if [ -z "$PREV_TAGS" ]; then
+        T="$2"
+    else
+        T="$(printf '%s\n%s' "$PREV_TAGS" "$2")"
+    fi
+    if [ -z "$TAG" ]; then
+        [ -z "$QUIET" ] && printf 'tag = %q\n' "$T" >&2
+    else
         if [[ "$TAG_FILE" =~ ^/ ]]; then
-            printf '%s\n' "$2" >"$TAG_FILE"
+            TG="$TAG_FILE"
         else
-            printf '%s\n' "$2" >"$OCWD/$TAG_FILE"
+            TG="$OCWD/$TAG_FILE"
         fi
+        [ -z "$QUIET" ] && printf 'tag = %q -> %s\n' "$T" "$TG" >&2
+        printf '%s\n' "$T" >"$TG"
     fi
     exit 0
 }
@@ -317,15 +337,23 @@ got_dir() {
         mv "$1" "$OUTPUT"
     fi
     [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
-    [ -z "$QUIET" ] && printf 'tag = %s\n' "$2" >&2
-    if [ ! -z "$TAG" ]; then
+    if [ -z "$PREV_TAGS" ]; then
+        T="$2"
+    else
+        T="$(printf '%s\n%s' "$PREV_TAGS" "$2")"
+    fi
+    if [ -z "$TAG" ]; then
+        [ -z "$QUIET" ] && printf 'tag = %q\n' "$T" >&2
+    else
         if [[ "$TAG_FILE" =~ ^/ ]]; then
-            printf '%s\n' "$2" >"$TAG_FILE"
+            TG="$TAG_FILE"
         elif [ "$OUTPUT" = "-" ]; then
-            printf '%s\n' "$2" >"$OCWD/$TAG_FILE"
+            TG="$OCWD/$TAG_FILE"
         else
-            printf '%s\n' "$2" >"$OUTPUT/$TAG_FILE"
+            TG="$OUTPUT/$TAG_FILE"
         fi
+        [ -z "$QUIET" ] && printf 'tag = %q -> %s\n' "$T" "$TG" >&2
+        printf '%s\n' "$T" >"$TG"
     fi
     exit 0
 }
@@ -380,7 +408,12 @@ got_repo() {
                 # TODO: token
                 [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
                 [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-                "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+                if [ -z "$PREV_TAGS" ]; then
+                    PREV_TAGS="$2"
+                else
+                    PREV_TAGS="$(printf '%s\n%s' "$PREV_TAGS" "$2")"
+                fi
+                OCWD="$OCWD" PREV_TAGS="$PREV_TAGS" "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
                 exit "$?"
             done 3< <(awk -F '"' '/^\[submodule / { print $2; }' "$1/.git/config")
         fi

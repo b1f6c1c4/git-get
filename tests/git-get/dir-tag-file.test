@@ -1,4 +1,4 @@
-R="$(git-get b1f6c1c4/git-get example-repo2 --tag-file tag -- dir)"
+R="$(git-get b1f6c1c4/git-get example-repo2 --tag-file=tag -- dir)"
 
 [ -z "$R" ]
 [ -d dir ]

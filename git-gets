@@ -260,15 +260,19 @@ got_dir() {
         mv "$1" "$OUTPUT"
     fi
     [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
-    [ -z "$QUIET" ] && printf 'tag = %s\n' "$2" >&2
-    if [ ! -z "$TAG_FILE" ]; then
+    T="$2"
+    if [ -z "$TAG_FILE" ]; then
+        [ -z "$QUIET" ] && printf 'tag = %q\n' "$T" >&2
+    else
         if [[ "$TAG_FILE" =~ ^/ ]]; then
-            printf '%s\n' "$2" >"$TAG_FILE"
+            TG="$TAG_FILE"
         elif [ "$OUTPUT" = "-" ]; then
-            printf '%s\n' "$2" >"$OCWD/$TAG_FILE"
+            TG="$OCWD/$TAG_FILE"
         else
-            printf '%s\n' "$2" >"$OUTPUT/$TAG_FILE"
+            TG="$OUTPUT/$TAG_FILE"
         fi
+        [ -z "$QUIET" ] && printf 'tag = %q -> %s\n' "$T" "$TG" >&2
+        printf '%s\n' "$T" >"$TG"
     fi
     exit 0
 }
