@@ -5,31 +5,31 @@
 ## TL;DR
 
 ```bash
-git-get <url> -t
+git get <url> -t
 # is 1x~10000x faster than:
 #     git clone <url> repo
 #     git -C repo rev-parse HEAD > repo/VERSION
 #     rm -rf repo/.git
 
-git-get <url> -o <target> -- <file>
+git get <url> -o <target> -- <file>
 # is 1x~1000000x faster than:
 #     git clone <url> repo
 #     git -C repo submodule update --init --recursive
 #     cp repo/<file> <target> && rm -rf repo
 
-git-get <url> <commit> -- <file>
+git get <url> <commit> -- <file>
 # is 1x~1000000000x faster than:
 #     git clone --mirror <url> repo
 #     git -C repo switch --detach <commit>
 #     rm -rf repo/.git
 
-git-gets <url> <commit> -P
+git gets <url> <commit> -P
 # is 1x~10000000x faster than:
 #     git clone --mirror <url> repo
 #     git -C repo switch --detach <commit>
 #     git -C repo submodule update --init --recursive
 
-git-gets <url> <commit> -P --flat
+git gets <url> <commit> -P --flat
 # is 1x~10000000x faster than:
 #     git clone --mirror <url> repo
 #     git -C repo switch --detach <commit>
@@ -140,7 +140,6 @@ In `git-gets`, `.git` is kept by default. You can override this with `--flat`.
 ## Install
 
 We recommend that you download the two scripts directly:
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/bin/git-get > /dev/null && sudo chmod 755 /usr/bin/git-get
 curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/bin/git-gets > /dev/null && sudo chmod 755 /usr/bin/git-gets
@@ -149,6 +148,9 @@ mkdir -p ~/.local/bin/
 curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && sudo chmod 755 ~/.local/bin/git-get
 curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && sudo chmod 755 ~/.local/bin/git-gets
 ```
+
+You DO NOT need to setup `git config alias.get '!git-get'`.
+In fact, git is so smart that, as long as `git-get` is in `PATH`, `git <xyz>` will be interpreted as `git-<xyz>`.
 
 Upgrading:
 ```bash
