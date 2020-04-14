@@ -36,7 +36,7 @@ git gets <url> <commit> -P --flat
 #     git -C repo submodule update --init --recursive
 #     rm -rf repo/**/.git
 
-# If you already have a repo and want to inflate/update all its submodules:
+# If you already have a repo and want to inflate all its submodules:
 git gets
 # is 1x~10000000x faster than (and 8x shorter to type):
 #     git submodule update --init --recursive
