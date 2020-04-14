@@ -35,6 +35,11 @@ git gets <url> <commit> -P --flat
 #     git -C repo switch --detach <commit>
 #     git -C repo submodule update --init --recursive
 #     rm -rf repo/**/.git
+
+# If you already have a repo and want to inflate/update all its submodules:
+git gets
+# is 1x~10000000x faster than (and 8x shorter to type):
+#     git submodule update --init --recursive
 ```
 
 ## Why we need it, and why is it so fast?
@@ -113,6 +118,11 @@ git gets [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [[-o|--output] <target>] [-F|--rm-rf]
     [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
+
+git gets [-v|--verbose|-q|--quiet]
+    [-F|--rm-rf]
+    [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
+    [-- <path-to-submodule>...]
 ```
 
 Some comments:

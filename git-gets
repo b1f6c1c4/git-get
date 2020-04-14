@@ -12,6 +12,18 @@ else
     GH_USE_HTTPS="$GH_USE_HTTPS"
 fi
 
+if [ -z "$GIT_DIR" ]; then
+    GIT_DIR=
+else
+    GIT_DIR="$GIT_DIR"
+fi
+
+if [ -z "$GIT_WORK_TREE" ]; then
+    GIT_WORK_TREE=
+else
+    GIT_WORK_TREE="$GIT_WORK_TREE"
+fi
+
 set -euo pipefail
 
 usage()
@@ -21,6 +33,9 @@ git-gets [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [[-o|--output] <target>] [-F|--rm-rf]
     [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
+
+git-gets [-v|--verbose|-q|--quiet]
+    [-P|--parallel] [-c|--confirm]
 EOF
 }
 
@@ -39,6 +54,144 @@ fakerealpath() {
     fi
 }
 
+got_dir() {
+    set -e
+    if [ "$OUTPUT" = "-" ]; then
+        [ ! -z "$VERBOSE" ] && (cd "$(dirname "$1")" && ls -lhAR "$(basename "$1")" >&2)
+        (cd "$(dirname "$1")" && tar c "$(basename "$1")")
+    elif [ -d "$OUTPUT" ]; then
+        if [ ! -z "$FORCE_DIR" ]; then
+            [ -z "$QUIET" ] && printf 'Warning: Overriding directory %q\n' "$OUTPUT" >&2
+            rm -rf "$OUTPUT" && mv "$1" "$OUTPUT"
+        else
+            printf 'Error: Directory %q exists\n' "$OUTPUT" >&2
+            exit 1
+        fi
+    elif [ -f "$OUTPUT" ]; then
+        if [ ! -z "$FORCE_DIR" ]; then
+            [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
+            rm -f "$OUTPUT" && mv "$1" "$OUTPUT"
+        else
+            printf 'Error: File %q exists\n' "$OUTPUT" >&2
+            exit 1
+        fi
+    elif [ -e "$OUTPUT" ]; then
+        printf 'Error: Weird file %q exists\n' "$OUTPUT" >&2
+        exit 1
+    else
+        mv "$1" "$OUTPUT"
+    fi
+    [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
+    T="$2"
+    if [ -z "$TAG_FILE" ]; then
+        [ -z "$QUIET" ] && printf 'tag = %q\n' "$T" >&2
+    else
+        if [[ "$TAG_FILE" =~ ^/ ]]; then
+            TG="$TAG_FILE"
+        elif [ "$OUTPUT" = "-" ]; then
+            TG="$OCWD/$TAG_FILE"
+        else
+            TG="$OUTPUT/$TAG_FILE"
+        fi
+        [ -z "$QUIET" ] && printf 'tag = %q -> %s\n' "$T" "$TG" >&2
+        printf '%s\n' "$T" >"$TG"
+    fi
+    exit 0
+}
+
+got_repo() {
+    set -e
+    git config core.repositoryformatversion 0
+
+    ARGS=(git reset --hard)
+    [ ! -z "$QUIET" ] && ARGS+=(-q)
+    [   -z "$QUIET" ] && "${ARGS[@]}" >&2
+    [ ! -z "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+
+    ARGS=(git -C "$GIT_WORK_TREE" submodule)
+    [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+    ARGS+=(init)
+    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    [   -z "$QUIET" ] && "${ARGS[@]}" >&2
+    [ ! -z "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+
+    if [ -z "$RAW" ]; then
+        exec 4>&2
+    fi
+
+    while IFS= read -r -u 3 line; do
+        PA="$(git -C "$GIT_WORK_TREE" config --file ".gitmodules" "submodule.$line.path")"
+        URL="$(git config "submodule.$line.url")"
+        SSHA1="$(git ls-files -s "$PA" | cut -d ' ' -f2)"
+        [ ! -z "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
+        if rmdir "$GIT_WORK_TREE/$PA"; then
+            true
+        else
+            printf 'Warning: Skipping %s because the folder is not empty' "$PA" >&2
+            continue
+        fi
+        ARGS=("$0")
+        [ ! -z "$VERBOSE" ] && ARGS+=(--verbose)
+        [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+        [ ! -z "$PARALLEL" ] && ARGS+=(--parallel)
+        [ -z "$PARALLEL" ] && [ ! -z "$CONFIRM" ] && ARGS+=(--confirm)
+        ARGS+=(-o "$GIT_WORK_TREE/$PA" "$URL" "$SSHA1")
+        GO=YES
+        if [ ! -z "$CONFIRM" ]; then
+            PMT="$(printf 'Will clone %s from %s, proceed? (Y/n) ... ' "$PA" "$URL" >&4)"
+            while true; do
+                read -p "$PMT" -n 1 -r
+                case "$REPLY" in
+                    "")
+                        break
+                        ;;
+                    y|Y)
+                        printf '\n' >&2
+                        break
+                        ;;
+                    n|N)
+                        printf '\n' >&2
+                        GO=
+                        break
+                        ;;
+                    *)
+                        printf '\n' >&2
+                        ;;
+                esac
+            done
+        fi
+        if [ ! -z "$GO" ]; then
+            [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
+            [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            if [ -z "$PARALLEL" ]; then
+                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+            else
+                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2 &
+            fi
+        else
+            [ -z "$QUIET" ] && printf '%s %s %s %s\n' '---' "$PA" "$URL" "$SSHA1">&2
+        fi
+    done 3< <(awk -F '"' '/^\[submodule / { print $2; }' "$GIT_DIR/config")
+
+    wait
+    if [ -z "$RAW" ]; then
+        ARGS=(git -C "$GIT_WORK_TREE" submodule)
+        [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+        ARGS+=(absorbgitdirs)
+        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [   -z "$QUIET" ] && "${ARGS[@]}" >&2
+        [ ! -z "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+    fi
+    if [ -z "$SUBMODULE_MODE" ]; then
+        [ ! -z "$FLAT" ] && mv "$GIT_DIR" ".git"
+        got_dir "$GIT_WORK_TREE" "$1"
+    else
+        exit 0
+    fi
+}
+
+SUBMODULE_MODE=
 QUIET=
 VERBOSE=
 FORCE_DIR=
@@ -113,6 +266,36 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+if [ "${#POSITIONAL[@]}" -eq 0 ]; then
+    if git rev-parse HEAD >/dev/null 2>&1; then
+        SUBMODULE_MODE=YES
+    else
+        echo "Error: Must specify <repo-url> (any git remote) or <user>/<repo> (GitHub)"
+        exit 1
+    fi
+else
+    if [ ! -z "$SUBMODULE_MODE" ]; then
+        echo "Error: Too many positional arguments." >&2
+        exit 1
+    fi
+    if [ "${#POSITIONAL[@]}" -eq 1 ]; then
+        BRANCH="HEAD"
+    elif [ "${#POSITIONAL[@]}" -eq 2 ]; then
+        BRANCH="${POSITIONAL[1]}"
+    elif [ "${#POSITIONAL[@]}" -eq 3 ]; then
+        if [ ! -z "$OUTPUT" ]; then
+            echo "Error: Too many positional arguments." >&2
+            exit 1
+        fi
+        BRANCH="${POSITIONAL[1]}"
+        OUTPUT="${POSITIONAL[2]}"
+    else
+        echo "Error: Too many positional arguments." >&2
+        exit 1
+    fi
+fi
+
 if [ ! -z "$PARALLEL" ] && [ ! -z "$CONFIRM" ]; then
     echo "Warning: With --parallel, --confirm only works for first-level submodules." >&2
     PMT="Proceed? (y/n) ... "
@@ -136,23 +319,58 @@ if [ ! -z "$PARALLEL" ] && [ ! -z "$CONFIRM" ]; then
     done
 fi
 
-if [ "${#POSITIONAL[@]}" -eq 0 ]; then
-    echo "Error: Must specify <repo-url> (any git remote) or <user>/<repo> (GitHub)"
-    exit 1
-elif [ "${#POSITIONAL[@]}" -eq 1 ]; then
-    BRANCH="HEAD"
-elif [ "${#POSITIONAL[@]}" -eq 2 ]; then
-    BRANCH="${POSITIONAL[1]}"
-elif [ "${#POSITIONAL[@]}" -eq 3 ]; then
+which git >/dev/null
+if [ $? -ne 0 ]; then
+    echo "Error: git(1) not found" >&2
+    exit 66
+fi
+
+git_new || ([ ! -z "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
+
+if [ ! -z "$FLAT" ]; then
+    if [ -z "$TAG_FILE" ]; then
+        TAG_FILE="VERSION"
+    fi
+else
+    TAG_FILE=
+fi
+
+OCWD="$PWD"
+
+if [ ! -z "$SUBMODULE_MODE" ]; then
     if [ ! -z "$OUTPUT" ]; then
-        echo "Error: Too many positional arguments?" >&2
+        echo "Error: Conflict: --output cannot be used in submodule mode" >&2
         exit 1
     fi
-    BRANCH="${POSITIONAL[1]}"
-    OUTPUT="${POSITIONAL[2]}"
-else
-    echo "Error: Too many positional arguments?" >&2
-    exit 1
+    if [ ! -z "$FORCE_DIR" ]; then
+        echo "Error: Conflict: --rm-rf cannot be used in submodule mode" >&2
+        exit 1
+    fi
+    if [ ! -z "$GIT_WORK_TREE" ]; then
+        export GIT_WORK_TREE="$(realpath "$GIT_WORK_TREE")"
+    else
+        export GIT_WORK_TREE="$(git -C "$GIT_WORK_TREE" rev-parse --show-toplevel)"
+    fi
+    if [ ! -z "$GIT_DIR" ]; then
+        export GIT_DIR="$(realpath "$GIT_DIR")"
+    else
+        export GIT_DIR="$(realpath "$(git rev-parse --git-dir)")"
+    fi
+
+    if [ ! -z "$VERBOSE" ]; then
+        printf 'RAW=%q\n' "$RAW" >&2
+        printf 'FLAT=%q\n' "$FLAT" >&2
+        printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
+        printf 'PARALLEL=%q\n' "$PARALLEL" >&2
+        printf 'CONFIRM=%q\n' "$CONFIRM" >&2
+        printf 'GIT_DIR=%q\n' "$GIT_DIR" >&2
+        printf 'GIT_WORK_TREE=%q\n' "$GIT_WORK_TREE" >&2
+    fi
+
+    cd "$GIT_WORK_TREE"
+    got_repo "$(git rev-parse HEAD)"
+
+    exit 0
 fi
 
 if [[ "${POSITIONAL[0]}" =~ ^https://github.com/ ]]; then
@@ -183,26 +401,9 @@ if [ -z "$OUTPUT" ]; then
     OUTPUT="$BASENAME"
 fi
 
-if [ ! -z "$FLAT" ]; then
-    if [ -z "$TAG_FILE" ]; then
-        TAG_FILE="VERSION"
-    fi
-else
-    TAG_FILE=
-fi
-
-which git >/dev/null
-if [ $? -ne 0 ]; then
-    echo "Error: git(1) not found"
-    exit 66
-fi
-
-git_new || ([ ! -z "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
-
 if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
-OCWD="$PWD"
 if [ ! -z "$VERBOSE" ]; then
     printf 'RAW=%q\n' "$RAW" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
@@ -228,135 +429,6 @@ cd "$WORK_DIR"
 
 [ ! -z "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
 
-got_dir() {
-    set -e
-    if [ "$OUTPUT" = "-" ]; then
-        [ ! -z "$VERBOSE" ] && (cd "$(dirname "$1")" && ls -lhAR "$(basename "$1")" >&2)
-        (cd "$(dirname "$1")" && tar c "$(basename "$1")")
-    elif [ -d "$OUTPUT" ]; then
-        if [ ! -z "$FORCE_DIR" ]; then
-            [ -z "$QUIET" ] && printf 'Warning: Overriding directory %q\n' "$OUTPUT" >&2
-            rm -rf "$OUTPUT" && mv "$1" "$OUTPUT"
-        else
-            printf 'Error: Directory %q exists\n' "$OUTPUT" >&2
-            exit 1
-        fi
-    elif [ -f "$OUTPUT" ]; then
-        if [ ! -z "$FORCE_DIR" ]; then
-            [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
-            rm -f "$OUTPUT" && mv "$1" "$OUTPUT"
-        else
-            printf 'Error: File %q exists\n' "$OUTPUT" >&2
-            exit 1
-        fi
-    elif [ -e "$OUTPUT" ]; then
-        printf 'Error: Weird file %q exists\n' "$OUTPUT" >&2
-        exit 1
-    else
-        mv "$1" "$OUTPUT"
-    fi
-    [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
-    T="$2"
-    if [ -z "$TAG_FILE" ]; then
-        [ -z "$QUIET" ] && printf 'tag = %q\n' "$T" >&2
-    else
-        if [[ "$TAG_FILE" =~ ^/ ]]; then
-            TG="$TAG_FILE"
-        elif [ "$OUTPUT" = "-" ]; then
-            TG="$OCWD/$TAG_FILE"
-        else
-            TG="$OUTPUT/$TAG_FILE"
-        fi
-        [ -z "$QUIET" ] && printf 'tag = %q -> %s\n' "$T" "$TG" >&2
-        printf '%s\n' "$T" >"$TG"
-    fi
-    exit 0
-}
-
-got_repo() {
-    set -e
-    git --git-dir="$1/.git" config --bool core.bare false
-    git --git-dir="$1/.git" config core.repositoryformatversion 0
-
-    ARGS=(git reset --hard)
-    [ ! -z "$QUIET" ] && ARGS+=(-q)
-    [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-    [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-
-    ARGS=(git submodule)
-    [ ! -z "$QUIET" ] && ARGS+=(--quiet)
-    ARGS+=(init)
-    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-    [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-    [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-
-    if [ -z "$RAW" ]; then
-        exec 4>&2
-    fi
-
-    while IFS= read -r -u 3 line; do
-        PA="$(git config --file "$1/.gitmodules" "submodule.$line.path")"
-        URL="$(git config --file "$1/.git/config" "submodule.$line.url")"
-        SSHA1="$(git --git-dir="$1/.git" ls-files -s "$PA" | cut -d ' ' -f2)"
-        [ ! -z "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
-        rmdir "$1/$PA"
-        ARGS=("$0")
-        [ ! -z "$VERBOSE" ] && ARGS+=(--verbose)
-        [ ! -z "$QUIET" ] && ARGS+=(--quiet)
-        [ ! -z "$PARALLEL" ] && ARGS+=(--parallel)
-        [ -z "$PARALLEL" ] && [ ! -z "$CONFIRM" ] && ARGS+=(--confirm)
-        ARGS+=(-o "$1/$PA" "$URL" "$SSHA1")
-        GO=YES
-        if [ ! -z "$CONFIRM" ]; then
-            PMT="$(printf 'Will clone %s from %s, proceed? (Y/n) ... ' "$PA" "$URL" >&4)"
-            while true; do
-                read -p "$PMT" -n 1 -r
-                case "$REPLY" in
-                    "")
-                        break
-                        ;;
-                    y|Y)
-                        printf '\n' >&2
-                        break
-                        ;;
-                    n|N)
-                        printf '\n' >&2
-                        GO=
-                        break
-                        ;;
-                    *)
-                        printf '\n' >&2
-                        ;;
-                esac
-            done
-        fi
-        if [ ! -z "$GO" ]; then
-            [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
-            [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-            if [ -z "$PARALLEL" ]; then
-                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
-            else
-                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2 &
-            fi
-        else
-            [ -z "$QUIET" ] && printf '%s %s %s %s\n' '---' "$PA" "$URL" "$SSHA1">&2
-        fi
-    done 3< <(awk -F '"' '/^\[submodule / { print $2; }' "$1/.git/config")
-
-    wait
-    if [ -z "$RAW" ]; then
-        ARGS=(git submodule)
-        [ ! -z "$QUIET" ] && ARGS+=(--quiet)
-        ARGS+=(absorbgitdirs)
-        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-    fi
-    [ ! -z "$FLAT" ] && mv "$1/.git" ".git"
-    got_dir "$1" "$2"
-}
-
 # 0. git 2.20+ -> shallow + [filter] -> filter
 if git_new; then
     mkdir -p "$BASENAME"
@@ -378,7 +450,10 @@ if git_new; then
     fi
     if [ "$R" -eq 0 ]; then
         set -e
-        got_repo "$BASENAME" "$(git --git-dir="$BASENAME/.git" rev-parse HEAD)"
+        export GIT_DIR="$(realpath "$BASENAME/.git")"
+        export GIT_WORK_TREE="$(realpath "$BASENAME")"
+        git config --bool core.bare false
+        got_repo "$(git rev-parse HEAD)"
     fi
     set -e
     if [ ! -z "$(grep 'warning: Could not find remote branch' clone.log)" ]; then
@@ -390,12 +465,15 @@ if git_new; then
         set +e
         "${ARGS[@]}"
         if [ "$?" -eq 0 ]; then
-            SHA1="$(git --git-dir="$BASENAME/.git" rev-parse "$BRANCH")"
+            SHA1="$(git -C "$BASENAME" rev-parse "$BRANCH")"
             if [ ! -z "$SHA1" ]; then
                 [ -z "$QUIET" ] && printf 'Got SHA1: %q\n' "$SHA1" >&2
                 set -e
-                git --git-dir="$BASENAME/.git" update-ref --no-deref HEAD "$SHA1"
-                got_repo "$BASENAME" "$SHA1"
+                export GIT_DIR="$(realpath "$BASENAME/.git")"
+                export GIT_WORK_TREE="$(realpath "$BASENAME")"
+                git config --bool core.bare false
+                git update-ref --no-deref HEAD "$SHA1"
+                got_repo "$SHA1"
             fi
         fi
         set -e
