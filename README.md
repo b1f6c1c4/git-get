@@ -104,12 +104,12 @@ interactively choose which dependency you want to install.
 The CLI is pretty self-explanatory:
 
 ```bash
-git-get [-v|--verbose|-q|--quiet]
+git get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [-o <target> |--output=<target>] [-f|--force] [-F|--rm-rf]
     [--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 
-git-gets [-v|--verbose|-q|--quiet]
+git gets [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [[-o|--output] <target>] [-F|--rm-rf]
     [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]

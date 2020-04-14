@@ -45,6 +45,16 @@ fakerealpath() {
     fi
 }
 
+normalize() {
+    X="$1"
+    ODIR=
+    while [ ! "$X" = "$ODIR" ]; do
+        ODIR="$X"
+        X="$(sed -E 's_//_/_g; s_/\./_/_g; s_[^/]+/\.\./_/_g; s_/$__g; s_^/__g; s_/\.$__g; s_^\./__g' <<<"$X")"
+    done
+    printf '%s' "$X"
+}
+
 QUIET=
 VERBOSE=
 FORCE=
@@ -171,11 +181,7 @@ else
     fi
 fi
 
-ODIR=
-while [ ! "$DIR" = "$ODIR" ]; do
-    ODIR="$DIR"
-    DIR="$(printf '%s' "$DIR" | sed -E 's_//_/_g; s_/\./_/_g; s_[^/]+/\.\./_/_g; s_/$__g; s_^/__g; s_/\.$__g; s_^\./__g')"
-done
+DIR="$(normalize "$DIR")"
 
 if [ ! -z "$DIR" ]; then
     BASENAME="$(basename "$DIR")"
