@@ -57,10 +57,10 @@ fakerealpath() {
 got_dir() {
     set -e
     if [ "$OUTPUT" = "-" ]; then
-        [ ! -z "$VERBOSE" ] && (cd "$(dirname "$1")" && ls -lhAR "$(basename "$1")" >&2)
+        [ -n "$VERBOSE" ] && (cd "$(dirname "$1")" && ls -lhAR "$(basename "$1")" >&2)
         (cd "$(dirname "$1")" && tar c "$(basename "$1")")
     elif [ -d "$OUTPUT" ]; then
-        if [ ! -z "$FORCE_DIR" ]; then
+        if [ -n "$FORCE_DIR" ]; then
             [ -z "$QUIET" ] && printf 'Warning: Overriding directory %q\n' "$OUTPUT" >&2
             rm -rf "$OUTPUT" && mv "$1" "$OUTPUT"
         else
@@ -68,7 +68,7 @@ got_dir() {
             exit 1
         fi
     elif [ -f "$OUTPUT" ]; then
-        if [ ! -z "$FORCE_DIR" ]; then
+        if [ -n "$FORCE_DIR" ]; then
             [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
             rm -f "$OUTPUT" && mv "$1" "$OUTPUT"
         else
@@ -81,7 +81,7 @@ got_dir() {
     else
         mv "$1" "$OUTPUT"
     fi
-    [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
+    [ -n "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
     T="$2"
     if [ -z "$TAG_FILE" ]; then
         [ -z "$QUIET" ] && printf 'tag = %q\n' "$T" >&2
@@ -104,17 +104,17 @@ got_repo() {
     git config core.repositoryformatversion 0
 
     ARGS=(git reset --hard)
-    [ ! -z "$QUIET" ] && ARGS+=(-q)
+    [ -n "$QUIET" ] && ARGS+=(-q)
     [   -z "$QUIET" ] && "${ARGS[@]}" >&2
-    [ ! -z "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
-    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+    [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
 
     ARGS=(git -C "$GIT_WORK_TREE" submodule)
-    [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+    [ -n "$QUIET" ] && ARGS+=(--quiet)
     ARGS+=(init)
-    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
     [   -z "$QUIET" ] && "${ARGS[@]}" >&2
-    [ ! -z "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+    [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
 
     if [ -z "$RAW" ]; then
         exec 4>&2
@@ -124,7 +124,7 @@ got_repo() {
         PA="$(git -C "$GIT_WORK_TREE" config --file ".gitmodules" "submodule.$line.path")"
         URL="$(git config "submodule.$line.url")"
         SSHA1="$(git ls-files -s "$PA" | cut -d ' ' -f2)"
-        [ ! -z "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
+        [ -n "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
         if rmdir "$GIT_WORK_TREE/$PA"; then
             true
         else
@@ -132,13 +132,13 @@ got_repo() {
             continue
         fi
         ARGS=("$0")
-        [ ! -z "$VERBOSE" ] && ARGS+=(--verbose)
-        [ ! -z "$QUIET" ] && ARGS+=(--quiet)
-        [ ! -z "$PARALLEL" ] && ARGS+=(--parallel)
-        [ -z "$PARALLEL" ] && [ ! -z "$CONFIRM" ] && ARGS+=(--confirm)
+        [ -n "$VERBOSE" ] && ARGS+=(--verbose)
+        [ -n "$QUIET" ] && ARGS+=(--quiet)
+        [ -n "$PARALLEL" ] && ARGS+=(--parallel)
+        [ -z "$PARALLEL" ] && [ -n "$CONFIRM" ] && ARGS+=(--confirm)
         ARGS+=(-o "$GIT_WORK_TREE/$PA" "$URL" "$SSHA1")
         GO=YES
-        if [ ! -z "$CONFIRM" ]; then
+        if [ -n "$CONFIRM" ]; then
             PMT="$(printf 'Will clone %s from %s, proceed? (Y/n) ... ' "$PA" "$URL" >&4)"
             while true; do
                 read -p "$PMT" -n 1 -r
@@ -161,9 +161,9 @@ got_repo() {
                 esac
             done
         fi
-        if [ ! -z "$GO" ]; then
+        if [ -n "$GO" ]; then
             [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
-            [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
             if [ -z "$PARALLEL" ]; then
                 RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
             else
@@ -177,14 +177,14 @@ got_repo() {
     wait
     if [ -z "$RAW" ]; then
         ARGS=(git -C "$GIT_WORK_TREE" submodule)
-        [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+        [ -n "$QUIET" ] && ARGS+=(--quiet)
         ARGS+=(absorbgitdirs)
-        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         [   -z "$QUIET" ] && "${ARGS[@]}" >&2
-        [ ! -z "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+        [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     fi
     if [ -z "$SUBMODULE_MODE" ]; then
-        [ ! -z "$FLAT" ] && mv "$GIT_DIR" ".git"
+        [ -n "$FLAT" ] && mv "$GIT_DIR" ".git"
         got_dir "$GIT_WORK_TREE" "$1"
     else
         exit 0
@@ -275,7 +275,7 @@ if [ "${#POSITIONAL[@]}" -eq 0 ]; then
         exit 1
     fi
 else
-    if [ ! -z "$SUBMODULE_MODE" ]; then
+    if [ -n "$SUBMODULE_MODE" ]; then
         echo "Error: Too many positional arguments." >&2
         exit 1
     fi
@@ -284,7 +284,7 @@ else
     elif [ "${#POSITIONAL[@]}" -eq 2 ]; then
         BRANCH="${POSITIONAL[1]}"
     elif [ "${#POSITIONAL[@]}" -eq 3 ]; then
-        if [ ! -z "$OUTPUT" ]; then
+        if [ -n "$OUTPUT" ]; then
             echo "Error: Too many positional arguments." >&2
             exit 1
         fi
@@ -296,7 +296,7 @@ else
     fi
 fi
 
-if [ ! -z "$PARALLEL" ] && [ ! -z "$CONFIRM" ]; then
+if [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ]; then
     echo "Warning: With --parallel, --confirm only works for first-level submodules." >&2
     PMT="Proceed? (y/n) ... "
     while true; do
@@ -319,15 +319,14 @@ if [ ! -z "$PARALLEL" ] && [ ! -z "$CONFIRM" ]; then
     done
 fi
 
-which git >/dev/null
-if [ $? -ne 0 ]; then
+if ! which git >/dev/null; then
     echo "Error: git(1) not found" >&2
     exit 66
 fi
 
-git_new || ([ ! -z "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
+git_new || ([ -n "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
 
-if [ ! -z "$FLAT" ]; then
+if [ -n "$FLAT" ]; then
     if [ -z "$TAG_FILE" ]; then
         TAG_FILE="VERSION"
     fi
@@ -337,27 +336,29 @@ fi
 
 OCWD="$PWD"
 
-if [ ! -z "$SUBMODULE_MODE" ]; then
-    if [ ! -z "$OUTPUT" ]; then
+if [ -n "$SUBMODULE_MODE" ]; then
+    if [ -n "$OUTPUT" ]; then
         echo "Error: Conflict: --output cannot be used in submodule mode" >&2
         exit 1
     fi
-    if [ ! -z "$FORCE_DIR" ]; then
+    if [ -n "$FORCE_DIR" ]; then
         echo "Error: Conflict: --rm-rf cannot be used in submodule mode" >&2
         exit 1
     fi
-    if [ ! -z "$GIT_WORK_TREE" ]; then
-        export GIT_WORK_TREE="$(realpath "$GIT_WORK_TREE")"
+    if [ -n "$GIT_WORK_TREE" ]; then
+        GIT_WORK_TREE="$(realpath "$GIT_WORK_TREE")"
     else
-        export GIT_WORK_TREE="$(git -C "$GIT_WORK_TREE" rev-parse --show-toplevel)"
+        GIT_WORK_TREE="$(git -C "$GIT_WORK_TREE" rev-parse --show-toplevel)"
     fi
-    if [ ! -z "$GIT_DIR" ]; then
-        export GIT_DIR="$(realpath "$GIT_DIR")"
+    if [ -n "$GIT_DIR" ]; then
+        GIT_DIR="$(realpath "$GIT_DIR")"
     else
-        export GIT_DIR="$(realpath "$(git rev-parse --git-dir)")"
+        GIT_DIR="$(realpath "$(git rev-parse --git-dir)")"
     fi
+    export GIT_WORK_TREE
+    export GIT_DIR
 
-    if [ ! -z "$VERBOSE" ]; then
+    if [ -n "$VERBOSE" ]; then
         printf 'RAW=%q\n' "$RAW" >&2
         printf 'FLAT=%q\n' "$FLAT" >&2
         printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
@@ -388,7 +389,7 @@ elif [[ "${POSITIONAL[0]}" =~ ^.*/.*/.*$ ]]; then
 else
     GITHUB=YES
     GH_REPO="${POSITIONAL[0]}"
-    if [ ! -z "$GH_USE_HTTPS" ]; then
+    if [ -n "$GH_USE_HTTPS" ]; then
         REPO="https://github.com/${POSITIONAL[0]}.git"
     else
         REPO="git@github.com:${POSITIONAL[0]}.git"
@@ -404,7 +405,7 @@ fi
 if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
-if [ ! -z "$VERBOSE" ]; then
+if [ -n "$VERBOSE" ]; then
     printf 'RAW=%q\n' "$RAW" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
@@ -427,19 +428,19 @@ finish() {
 trap finish EXIT
 cd "$WORK_DIR"
 
-[ ! -z "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
+[ -n "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
 
 # 0. git 2.20+ -> shallow + [filter] -> filter
 if git_new; then
     mkdir -p "$BASENAME"
     ARGS=(git clone --bare)
-    [ ! -z "$QUIET" ] && ARGS+=(-q)
+    [ -n "$QUIET" ] && ARGS+=(-q)
     [ -z "$QUIET" ] && ARGS+=(--progress)
     [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
     ARGS+=(--depth 1 --no-tags)
     ARGS+=(--filter blob:none)
     ARGS+=("$REPO" "$BASENAME/.git")
-    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
     set +e
     if [ -z "$QUIET" ]; then
         "${ARGS[@]}" 2>&1 | tee clone.log >&2
@@ -450,27 +451,30 @@ if git_new; then
     fi
     if [ "$R" -eq 0 ]; then
         set -e
-        export GIT_DIR="$(realpath "$BASENAME/.git")"
-        export GIT_WORK_TREE="$(realpath "$BASENAME")"
+        GIT_WORK_TREE="$(realpath "$BASENAME")"
+        GIT_DIR="$(realpath "$BASENAME/.git")"
+        export GIT_WORK_TREE
+        export GIT_DIR
         git config --bool core.bare false
         got_repo "$(git rev-parse HEAD)"
     fi
     set -e
-    if [ ! -z "$(grep 'warning: Could not find remote branch' clone.log)" ]; then
+    if grep -q 'warning: Could not find remote branch' clone.log; then
         ARGS=(git clone --mirror --filter tree:0)
-        [ ! -z "$QUIET" ] && ARGS+=(-q)
+        [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)
         ARGS+=("$REPO" "$BASENAME/.git")
-        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         set +e
-        "${ARGS[@]}"
-        if [ "$?" -eq 0 ]; then
+        if "${ARGS[@]}"; then
             SHA1="$(git -C "$BASENAME" rev-parse "$BRANCH")"
-            if [ ! -z "$SHA1" ]; then
+            if [ -n "$SHA1" ]; then
                 [ -z "$QUIET" ] && printf 'Got SHA1: %q\n' "$SHA1" >&2
                 set -e
-                export GIT_DIR="$(realpath "$BASENAME/.git")"
-                export GIT_WORK_TREE="$(realpath "$BASENAME")"
+                GIT_WORK_TREE="$(realpath "$BASENAME")"
+                GIT_DIR="$(realpath "$BASENAME/.git")"
+                export GIT_WORK_TREE
+                export GIT_DIR
                 git config --bool core.bare false
                 git update-ref --no-deref HEAD "$SHA1"
                 got_repo "$SHA1"

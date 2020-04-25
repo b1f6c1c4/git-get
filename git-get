@@ -50,6 +50,7 @@ normalize() {
     ODIR=
     while [ ! "$X" = "$ODIR" ]; do
         ODIR="$X"
+        # shellcheck disable=SC2016
         X="$(sed -E 's_//_/_g; s_/\./_/_g; s_[^/]+/\.\./_/_g; s_/$__g; s_^/__g; s_/\.$__g; s_^\./__g' <<<"$X")"
     done
     printf '%s' "$X"
@@ -133,11 +134,11 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
-if [ ! -z "$PRESERVE" ] && [ ! -z "$TAG" ]; then
+if [ -n "$PRESERVE" ] && [ -n "$TAG" ]; then
     echo "Error: Conflict: --preserve-git and --tag/--tag-file" >&2
     exit 1
 fi
-if [ ! -z "$PRESERVE" ] && [ ! -z "$DIR" ]; then
+if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
     echo "Error: Conflict: --preserve-git and -- <path>" >&2
     exit 1
 fi
@@ -174,7 +175,7 @@ elif [[ "${POSITIONAL[0]}" =~ ^.*/.*/.*$ ]]; then
 else
     GITHUB=YES
     GH_REPO="${POSITIONAL[0]}"
-    if [ ! -z "$GH_USE_HTTPS" ]; then
+    if [ -n "$GH_USE_HTTPS" ]; then
         REPO="https://github.com/${POSITIONAL[0]}.git"
     else
         REPO="git@github.com:${POSITIONAL[0]}.git"
@@ -183,7 +184,7 @@ fi
 
 DIR="$(normalize "$DIR")"
 
-if [ ! -z "$DIR" ]; then
+if [ -n "$DIR" ]; then
     BASENAME="$(basename "$DIR")"
 else
     BASENAME="$(basename "$REPO")"
@@ -196,7 +197,7 @@ else
     DEF_OUTPUT=
 fi
 
-if [ ! -z "$TAG" ]; then
+if [ -n "$TAG" ]; then
     if [ -z "$TAG_FILE" ]; then
         TAG_FILE="VERSION"
     fi
@@ -204,18 +205,17 @@ else
     TAG_FILE=
 fi
 
-which git >/dev/null
-if [ $? -ne 0 ]; then
+if ! which git >/dev/null; then
     echo "Error: git(1) not found"
     exit 66
 fi
 
-git_new || ([ ! -z "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
+git_new || ([ -n "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
 
 if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
-if [ ! -z "$VERBOSE" ]; then
+if [ -n "$VERBOSE" ]; then
     printf 'OCWD=%q\n' "$OCWD" >&2
     printf 'FORCE=%q\n' "$FORCE" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
@@ -241,7 +241,7 @@ finish() {
 trap finish EXIT
 cd "$WORK_DIR"
 
-[ ! -z "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
+[ -n "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
 
 got_file() {
     set -e
@@ -252,7 +252,7 @@ got_file() {
             cat "$1"
         fi
     elif [ -f "$OUTPUT" ]; then
-        if [ ! -z "$FORCE" ]; then
+        if [ -n "$FORCE" ]; then
             [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
             mv -f "$1" "$OUTPUT"
         else
@@ -260,7 +260,7 @@ got_file() {
             exit 1
         fi
     elif [ -d "$OUTPUT" ]; then
-        if [ ! -z "$DEF_OUTPUT" ]; then
+        if [ -n "$DEF_OUTPUT" ]; then
             printf 'Error: There is a directory %q\n' "$OUTPUT" >&2
             exit 1
         else
@@ -272,7 +272,7 @@ got_file() {
     else
         mv "$1" "$OUTPUT"
     fi
-    [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
+    [ -n "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
     if [ -z "$PREV_TAGS" ]; then
         T="$2"
     else
@@ -295,10 +295,10 @@ got_file() {
 got_dir() {
     set -e
     if [ "$OUTPUT" = "-" ]; then
-        [ ! -z "$VERBOSE" ] && (cd "$(dirname "$1")" && ls -lhAR "$(basename "$1")" >&2)
+        [ -n "$VERBOSE" ] && (cd "$(dirname "$1")" && ls -lhAR "$(basename "$1")" >&2)
         (cd "$(dirname "$1")" && tar c "$(basename "$1")")
     elif [ -d "$OUTPUT" ]; then
-        if [ ! -z "$FORCE_DIR" ]; then
+        if [ -n "$FORCE_DIR" ]; then
             [ -z "$QUIET" ] && printf 'Warning: Overriding directory %q\n' "$OUTPUT" >&2
             rm -rf "$OUTPUT" && mv "$1" "$OUTPUT"
         else
@@ -306,7 +306,7 @@ got_dir() {
             exit 1
         fi
     elif [ -f "$OUTPUT" ]; then
-        if [ ! -z "$FORCE" ]; then
+        if [ -n "$FORCE" ]; then
             [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
             rm -f "$OUTPUT" && mv "$1" "$OUTPUT"
         else
@@ -319,7 +319,7 @@ got_dir() {
     else
         mv "$1" "$OUTPUT"
     fi
-    [ ! -z "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
+    [ -n "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
     if [ -z "$PREV_TAGS" ]; then
         T="$2"
     else
@@ -348,48 +348,48 @@ got_repo() {
 
     if [ -z "$DIR" ]; then
         ARGS=(git reset --hard)
-        [ ! -z "$QUIET" ] && ARGS+=(-q)
-        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$QUIET" ] && ARGS+=(-q)
+        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+        [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
         [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
         got_dir "$1" "$2" && exit 0
     else
         P="$(git --git-dir="$1/.git" ls-tree HEAD -- "$DIR" | cut -d $'\t' -f 2)"
         T="$(git --git-dir="$1/.git" ls-tree HEAD -- "$DIR" | cut -d ' ' -f 2)"
-        [ ! -z "$VERBOSE" ] && printf 'Checking %q -> %s (%q) \n' "$DIR" "$T" "$P" >&2
+        [ -n "$VERBOSE" ] && printf 'Checking %q -> %s (%q) \n' "$DIR" "$T" "$P" >&2
         if [ "$T" = "commit" ]; then
             ARGS=(git restore --source=HEAD --staged --worktree)
-            [ ! -z "$QUIET" ] && ARGS+=(-q)
+            [ -n "$QUIET" ] && ARGS+=(-q)
             ARGS+=(-- ".gitmodules" "$P")
-            [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
             [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-            [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+            [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
             ARGS=(git submodule)
-            [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+            [ -n "$QUIET" ] && ARGS+=(--quiet)
             ARGS+=(init)
-            [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
             [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-            [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+            [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
             while IFS= read -r -u 3 line; do
                 PA="$(git config --file "$1/.gitmodules" "submodule.$line.path")"
                 URL="$(git config --file "$1/.git/config" "submodule.$line.url")"
                 SSHA1="$(git --git-dir="$1/.git" ls-files -s "$PA" | cut -d ' ' -f2)"
-                [ ! -z "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
+                [ -n "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
                 [ ! "$PA" = "$P" ] && continue
                 ARGS=("$0")
-                [ ! -z "$VERBOSE" ] && ARGS+=(--verbose)
-                [ ! -z "$QUIET" ] && ARGS+=(--quiet)
+                [ -n "$VERBOSE" ] && ARGS+=(--verbose)
+                [ -n "$QUIET" ] && ARGS+=(--quiet)
                 ARGS+=("$URL" "$SSHA1")
                 ARGS+=(-o "$OUTPUT")
-                [ ! -z "$FORCE" ] && ARGS+=(--force)
-                [ ! -z "$FORCE_DIR" ] && ARGS+=(--force-dir)
-                [ ! -z "$TAG_FILE" ] && ARGS+=(--tag-file "$TAG_FILE")
+                [ -n "$FORCE" ] && ARGS+=(--force)
+                [ -n "$FORCE_DIR" ] && ARGS+=(--force-dir)
+                [ -n "$TAG_FILE" ] && ARGS+=(--tag-file "$TAG_FILE")
                 [ ! "$P" = "$DIR" ] && ARGS+=(-- "${DIR#$P/}")
                 [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
-                [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+                [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
                 if [ -z "$PREV_TAGS" ]; then
                     PREV_TAGS="$2"
                 else
@@ -403,18 +403,18 @@ got_repo() {
         # git restore --worktree issue fetch-pack one-by-another
         # which is super slow
         ARGS=(git reset HEAD)
-        [ ! -z "$QUIET" ] && ARGS+=(-q)
+        [ -n "$QUIET" ] && ARGS+=(-q)
         ARGS+=(-- "$DIR")
-        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+        [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
         ARGS=(git restore --worktree)
-        [ ! -z "$QUIET" ] && ARGS+=(-q)
+        [ -n "$QUIET" ] && ARGS+=(-q)
         ARGS+=(-- "$DIR")
-        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-        [ ! -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+        [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
         [ -f "$1/$DIR" ] && got_file "$1/$DIR" "$2"
         [ -d "$1/$DIR" ] && got_dir "$1/$DIR" "$2"
         [ -L "$1/$DIR" ] && got_file "$1/$DIR" "$2" LINK
@@ -427,31 +427,29 @@ got_repo() {
 if git_new; then
     mkdir -p "$BASENAME"
     ARGS=(git clone --bare)
-    [ ! -z "$QUIET" ] && ARGS+=(-q)
+    [ -n "$QUIET" ] && ARGS+=(-q)
     [ -z "$QUIET" ] && ARGS+=(--progress)
     [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
     ARGS+=(--depth 1 --no-tags)
-    [ ! -z "$DIR" ] && ARGS+=(--filter blob:none)
+    [ -n "$DIR" ] && ARGS+=(--filter blob:none)
     ARGS+=("$REPO" "$BASENAME/.git")
-    [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
     set +e
-    "${ARGS[@]}" 2>&1 | tee clone.log >&2
-    if [ "$?" -eq 0 ]; then
+    if "${ARGS[@]}" 2>&1 | tee clone.log >&2; then
         set -e
         got_repo "$BASENAME" "$(git --git-dir="$BASENAME/.git" rev-parse HEAD)"
     fi
     set -e
-    if [ ! -z "$(grep 'warning: Could not find remote branch' clone.log)" ]; then
+    if grep -q 'warning: Could not find remote branch' clone.log; then
         ARGS=(git clone --mirror --filter tree:0)
-        [ ! -z "$QUIET" ] && ARGS+=(-q)
+        [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)
         ARGS+=("$REPO" "$BASENAME/.git")
-        [ ! -z "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         set +e
-        "${ARGS[@]}"
-        if [ "$?" -eq 0 ]; then
+        if "${ARGS[@]}"; then
             SHA1="$(git --git-dir="$BASENAME/.git" rev-parse "$BRANCH")"
-            if [ ! -z "$SHA1" ]; then
+            if [ -n "$SHA1" ]; then
                 [ -z "$QUIET" ] && printf 'Got SHA1: %q\n' "$SHA1" >&2
                 set -e
                 git --git-dir="$BASENAME/.git" update-ref --no-deref HEAD "$SHA1"
