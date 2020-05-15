@@ -114,16 +114,23 @@ git get [-v|--verbose|-q|--quiet]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
     [--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 
-git gets [-v|--verbose|-q|--quiet]
+git gets [-v|--verbose|-q|--quiet] [--no-recursive]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [-o <target> | --output=<target>] [-F|--rm-rf]
     [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
 
-git gets [-v|--verbose|-q|--quiet]
-    [-P|--parallel] [-c|--confirm]
+git gets [-v|--verbose|-q|--quiet] [--no-recursive]
+    [-P|--parallel] [-c|--confirm] [--no-init]
 ```
 
 Some comments:
+
+* `--no-recursive` and `--no-init`:
+The former one means that only *top-level* submodules are downloaded.
+The latter one means that you need to manually initialize *top-level* submodules.
+Both switches apply solely to top-level submodules.
+If you don't want to download any submodule, simply use `git get` instead of `git gets`.
+Finer control is feasible using `--confirm`.
 
 * `-t|--tag` and `--tag-file`:
 Tag file is a file, usually named `VERSION`, that is put

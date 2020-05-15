@@ -29,13 +29,13 @@ set -euo pipefail
 usage()
 {
     cat - <<EOF
-git-gets [-v|--verbose|-q|--quiet]
+git-gets [-v|--verbose|-q|--quiet] [--no-recursive]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [-o <target> | --output=<target>] [-F|--rm-rf]
     [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
 
-git-gets [-v|--verbose|-q|--quiet]
-    [-P|--parallel] [-c|--confirm]
+git-gets [-v|--verbose|-q|--quiet] [--no-recursive]
+    [-P|--parallel] [-c|--confirm] [--no-init]
 EOF
 }
 
@@ -109,12 +109,23 @@ got_repo() {
     [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
 
-    ARGS=(git -C "$GIT_WORK_TREE" submodule)
-    [ -n "$QUIET" ] && ARGS+=(--quiet)
-    ARGS+=(init)
-    [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-    [   -z "$QUIET" ] && "${ARGS[@]}" >&2
-    [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+    if [ -n "$RAW" ] && [ -n "$NO_RECURSIVE" ]; then
+        if [ -z "$SUBMODULE_MODE" ]; then
+            [ -n "$FLAT" ] && mv "$GIT_DIR" ".git"
+            got_dir "$GIT_WORK_TREE" "$1"
+        else
+            exit 0
+        fi
+    fi
+
+    if [ -z "$NO_INIT" ]; then
+        ARGS=(git -C "$GIT_WORK_TREE" submodule)
+        [ -n "$QUIET" ] && ARGS+=(--quiet)
+        ARGS+=(init)
+        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [   -z "$QUIET" ] && "${ARGS[@]}" >&2
+        [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+    fi
 
     if [ -z "$RAW" ]; then
         exec 4>&2
@@ -123,12 +134,16 @@ got_repo() {
     while IFS= read -r -u 3 line; do
         PA="$(git -C "$GIT_WORK_TREE" config --file ".gitmodules" "submodule.$line.path")"
         URL="$(git config "submodule.$line.url")"
+        if [ -z "$URL" ]; then
+            [ -z "$QUIET" ] && printf 'Skipping %s because it has not been initialized\n' "$PA" >&2
+            continue
+        fi
         SSHA1="$(git ls-files -s "$PA" | cut -d ' ' -f2)"
         [ -n "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
         if rmdir "$GIT_WORK_TREE/$PA"; then
             true
         else
-            printf 'Warning: Skipping %s because the folder is not empty' "$PA" >&2
+            printf 'Warning: Skipping %s because the folder is not empty\n' "$PA" >&2
             continue
         fi
         ARGS=("$0")
@@ -136,6 +151,7 @@ got_repo() {
         [ -n "$QUIET" ] && ARGS+=(--quiet)
         [ -n "$PARALLEL" ] && ARGS+=(--parallel)
         [ -z "$PARALLEL" ] && [ -n "$CONFIRM" ] && ARGS+=(--confirm)
+        [ -n "$NO_RECURSIVE" ] && ARGS+=(--no-recursive)
         ARGS+=(-o "$GIT_WORK_TREE/$PA" "$URL" "$SSHA1")
         GO=YES
         if [ -n "$CONFIRM" ]; then
@@ -200,6 +216,8 @@ FLAT=
 TAG_FILE=
 PARALLEL=
 CONFIRM=
+NO_INIT=
+NO_RECURSIVE=
 POSITIONAL=()
 while [ $# -gt 0 ]; do
     key="$1"
@@ -245,6 +263,14 @@ while [ $# -gt 0 ]; do
             ;;
         -c|--confirm)
             CONFIRM=YES
+            shift
+            ;;
+        --no-init)
+            NO_INIT=YES
+            shift
+            ;;
+        --no-recursive)
+            NO_RECURSIVE=YES
             shift
             ;;
         *)
@@ -364,6 +390,8 @@ if [ -n "$SUBMODULE_MODE" ]; then
         printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
         printf 'PARALLEL=%q\n' "$PARALLEL" >&2
         printf 'CONFIRM=%q\n' "$CONFIRM" >&2
+        printf 'NO_INIT=%q\n' "$NO_INIT" >&2
+        printf 'NO_RECURSIVE=%q\n' "$NO_RECURSIVE" >&2
         printf 'GIT_DIR=%q\n' "$GIT_DIR" >&2
         printf 'GIT_WORK_TREE=%q\n' "$GIT_WORK_TREE" >&2
     fi
@@ -372,6 +400,11 @@ if [ -n "$SUBMODULE_MODE" ]; then
     got_repo "$(git rev-parse HEAD)"
 
     exit 0
+fi
+
+if [ -n "$NO_INIT" ]; then
+    echo "Error: Conflict: --no-init cannot be used in regular mode, consider using git-get instead" >&2
+    exit 1
 fi
 
 if [[ "${POSITIONAL[0]}" =~ ^https://github.com/ ]]; then
@@ -413,6 +446,7 @@ if [ -n "$VERBOSE" ]; then
     printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
     printf 'PARALLEL=%q\n' "$PARALLEL" >&2
     printf 'CONFIRM=%q\n' "$CONFIRM" >&2
+    printf 'NO_RECURSIVE=%q\n' "$NO_RECURSIVE" >&2
     printf 'GITHUB=%q\n' "$GITHUB" >&2
     printf 'GH_REPO=%q\n' "$GH_REPO" >&2
     printf 'REPO=%q\n' "$REPO" >&2
