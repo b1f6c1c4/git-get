@@ -111,18 +111,16 @@ The CLI is pretty self-explanatory:
 ```bash
 git get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
-    [-o <target> |--output=<target>] [-f|--force] [-F|--rm-rf]
+    [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
     [--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 
 git gets [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
-    [[-o|--output] <target>] [-F|--rm-rf]
+    [-o <target> | --output=<target>] [-F|--rm-rf]
     [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
 
 git gets [-v|--verbose|-q|--quiet]
-    [-F|--rm-rf]
-    [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
-    [-- <path-to-submodule>...]
+    [-P|--parallel] [-c|--confirm]
 ```
 
 Some comments:
@@ -164,11 +162,11 @@ In fact, git is so smart that, as long as `git-get` is in `PATH`, `git <xyz>` wi
 
 Upgrading:
 ```bash
-git-get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/bin/git-get >/dev/null
-git-get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/bin/git-gets >/dev/null
+git get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/bin/git-get >/dev/null
+git get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/bin/git-gets >/dev/null
 # Or, locally:
-git-get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
-git-get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
+git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
+git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
 ```
 
 ## Requirements

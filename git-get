@@ -25,7 +25,7 @@ usage()
     cat - <<EOF
 git-get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
-    [-o <target> |--output=<target>] [-f|--force] [-F|--rm-rf]
+    [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
     [--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 EOF
 }
