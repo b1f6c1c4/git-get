@@ -1,6 +1,7 @@
 # `git-get`: Blazingly fast `git clone`
 
-[![Test Status](https://travis-ci.com/b1f6c1c4/git-get.svg?branch=master)](https://travis-ci.com/b1f6c1c4/git-get)
+[![Linux and macOS Test Status](https://travis-ci.com/b1f6c1c4/git-get.svg?branch=master)](https://travis-ci.com/b1f6c1c4/git-get)
+[![Windows Test Status](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)](https://ci.appveyor.com/project/b1f6c1c4/git-get/branch/master)
 
 ## TL;DR
 
@@ -112,7 +113,7 @@ The CLI is pretty self-explanatory:
 git get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
-    [--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
+    [-g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 
 git gets [-v|--verbose|-q|--quiet] [--no-recursive]
     <url> | <user>/<repo> [<branch>|<sha1>]
@@ -148,45 +149,75 @@ If you downloaded a directory and `<target>` is a directory,
 you may override the directory with `-F|--rm-rf`.
 In no case will a directory be put into an existing directory.
 
-* `--preserve-git` and `--flat`:
-In `git-get`, `.git` is removed by default. You can override this with `--preserve-git`.
+* `-g|--preserve-git` and `--flat`:
+In `git-get`, `.git` is removed by default. You can override this with `-g|--preserve-git`.
 In `git-gets`, `.git` is kept by default. You can override this with `--flat`.
 
 ## Install
 
-We recommend that you download the two scripts directly:
-```bash
-curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/bin/git-get > /dev/null && sudo chmod 755 /usr/bin/git-get
-curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/bin/git-gets > /dev/null && sudo chmod 755 /usr/bin/git-gets
-# Or, locally:
-mkdir -p ~/.local/bin/
-curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && sudo chmod 755 ~/.local/bin/git-get
-curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && sudo chmod 755 ~/.local/bin/git-gets
-# Or, install on macOS:
-curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/local/bin/git-get > /dev/null && sudo chmod 755 /usr/local/bin/git-get
-curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/local/bin/git-gets > /dev/null && sudo chmod 755 /usr/local/bin/git-gets
-```
+- Linux
+
+    We recommend that you download the two scripts directly:
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/bin/git-get > /dev/null && sudo chmod 755 /usr/bin/git-get
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/bin/git-gets > /dev/null && sudo chmod 755 /usr/bin/git-gets
+    # Or, locally:
+    mkdir -p ~/.local/bin/
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && sudo chmod 755 ~/.local/bin/git-get
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && sudo chmod 755 ~/.local/bin/git-gets
+    ```
+
+- MacOS
+
+    ```bash
+    # Install dependencies, including readpath(1):
+    brew install coreutils
+    # Install git-get(1) globally:
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/local/bin/git-get > /dev/null && sudo chmod 755 /usr/local/bin/git-get
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/local/bin/git-gets > /dev/null && sudo chmod 755 /usr/local/bin/git-gets
+    # Or, locally:
+    mkdir -p ~/.local/bin/
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && sudo chmod 755 ~/.local/bin/git-get
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && sudo chmod 755 ~/.local/bin/git-gets
+    ```
+
+- Windows
+
+    Similar as above, but you need to manually download the two files [git-get](https://github.com/b1f6c1c4/git-get/blob/master/git-get) and [git-gets](https://github.com/b1f6c1c4/git-get/blob/master/git-gets) and put it in `PATH`.
 
 You DO NOT need to setup `git config alias.get '!git-get'`.
 In fact, git is so smart that, as long as `git-get` is in `PATH`, `git <xyz>` will be interpreted as `git-<xyz>`.
 
-Upgrading:
-```bash
-git get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/bin/git-get >/dev/null
-git get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/bin/git-gets >/dev/null
-# Or, locally:
-git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
-git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
-# Or, upgrade on macOS:
-git get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/local/bin/git-get >/dev/null
-git get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/local/bin/git-gets >/dev/null
-```
+### Upgrading
+
+- Linux
+
+    ```bash
+    git get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/bin/git-get >/dev/null
+    git get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/bin/git-gets >/dev/null
+    # Or, locally:
+    git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
+    git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
+    ```
+
+- MacOS
+
+    ```bash
+    git get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/local/bin/git-get >/dev/null
+    git get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/local/bin/git-gets >/dev/null
+    # Or, locally:
+    git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
+    git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
+    ```
+
+- Windows
+
+    Similar as above, use `git get` to upgrade itself.
 
 ## Requirements
 
-* `Linux`/`macOS`
+* `bash`, can be `GNU bash` on Linux / MacOS, or `Git bash` on Windows
 * `git` **2.20+**, the newer the better
-* `bash`
 
 ## License
 

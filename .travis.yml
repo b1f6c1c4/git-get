@@ -1,19 +1,27 @@
-language: minimal
-os: linux
-dist: bitonic
+language: bash
+jobs:
+  include:
+    - os: linux
+      dist: bionic
+    - os: osx
+      osx_image: xcode11.4
 
 branches:
-  only:
-    - master
+  except:
+    - /^example-/
 
-before_install:
-  - make clean
+env:
+  global:
+    - MAKEFLAGS="-j8"
 
 after_install:
+  - make clean
+
+before_script:
   - git version
 
 script:
   - make test
 
-notification:
+notifications:
   email: false

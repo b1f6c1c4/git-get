@@ -26,7 +26,7 @@ usage()
 git-get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
-    [--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
+    [-g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 EOF
 }
 
@@ -99,7 +99,7 @@ while [ $# -gt 0 ]; do
             OUTPUT="-"
             shift
             ;;
-        --preserve-git)
+        -g|--preserve-git)
             PRESERVE=YES
             shift
             ;;
@@ -135,11 +135,11 @@ while [ $# -gt 0 ]; do
     esac
 done
 if [ -n "$PRESERVE" ] && [ -n "$TAG" ]; then
-    echo "Error: Conflict: --preserve-git and --tag/--tag-file" >&2
+    echo "Error: Conflict: -g|--preserve-git and --tag/--tag-file" >&2
     exit 1
 fi
 if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
-    echo "Error: Conflict: --preserve-git and -- <path>" >&2
+    echo "Error: Conflict: -g|--preserve-git and -- <path>" >&2
     exit 1
 fi
 
