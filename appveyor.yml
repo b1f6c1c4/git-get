@@ -14,9 +14,10 @@ environment:
 
 install:
   - choco install make
+  - make clean
 
 before_build:
-  - make clean
+  - git version
 
 build_script:
   - make test

@@ -14,7 +14,7 @@ env:
   global:
     - MAKEFLAGS="-j8"
 
-before_install:
+after_install:
   - make clean
 
 before_script:
