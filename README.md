@@ -167,6 +167,20 @@ In `git-gets`, `.git` is kept by default. You can override this with `--flat`.
     curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && sudo chmod 755 ~/.local/bin/git-gets
     ```
 
+- MacOS
+
+    ```bash
+    # Install dependencies, including readpath(1):
+    brew install coreutils
+    # Install git-get(1) globally:
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/local/bin/git-get > /dev/null && sudo chmod 755 /usr/local/bin/git-get
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/local/bin/git-gets > /dev/null && sudo chmod 755 /usr/local/bin/git-gets
+    # Or, locally:
+    mkdir -p ~/.local/bin/
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && sudo chmod 755 ~/.local/bin/git-get
+    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && sudo chmod 755 ~/.local/bin/git-gets
+    ```
+
 - Windows
 
     Similar as above, but you need to manually download the two files [git-get](https://github.com/b1f6c1c4/git-get/blob/master/git-get) and [git-gets](https://github.com/b1f6c1c4/git-get/blob/master/git-gets) and put it in `PATH`.
@@ -186,13 +200,23 @@ In fact, git is so smart that, as long as `git-get` is in `PATH`, `git <xyz>` wi
     git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
     ```
 
+- MacOS
+
+    ```bash
+    git get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/local/bin/git-get >/dev/null
+    git get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/local/bin/git-gets >/dev/null
+    # Or, locally:
+    git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
+    git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
+    ```
+
 - Windows
 
     Similar as above, use `git get` to upgrade itself.
 
 ## Requirements
 
-* `bash`, can be `GNU bash` on Linux or `Git bash` on Windows
+* `bash`, can be `GNU bash` on Linux / MacOS, or `Git bash` on Windows
 * `git` **2.20+**, the newer the better
 
 ## License
