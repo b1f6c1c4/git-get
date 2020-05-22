@@ -1,0 +1,22 @@
+version: 1.0.{build}
+
+branches:
+  except:
+    - /^example-/
+
+skip_commits:
+  message: /\[ci skip\]|\[skip ci\]/
+
+image: Visual Studio 2019
+
+environment:
+  MAKEFLAGS: -j8
+
+install:
+  - choco install make
+
+before_build:
+  - make clean
+
+build_script:
+  - make test
