@@ -112,7 +112,7 @@ The CLI is pretty self-explanatory:
 git get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
-    [--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
+    [-g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 
 git gets [-v|--verbose|-q|--quiet] [--no-recursive]
     <url> | <user>/<repo> [<branch>|<sha1>]
@@ -148,8 +148,8 @@ If you downloaded a directory and `<target>` is a directory,
 you may override the directory with `-F|--rm-rf`.
 In no case will a directory be put into an existing directory.
 
-* `--preserve-git` and `--flat`:
-In `git-get`, `.git` is removed by default. You can override this with `--preserve-git`.
+* `-g|--preserve-git` and `--flat`:
+In `git-get`, `.git` is removed by default. You can override this with `-g|--preserve-git`.
 In `git-gets`, `.git` is kept by default. You can override this with `--flat`.
 
 ## Install
