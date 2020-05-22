@@ -2,7 +2,7 @@ language: bash
 jobs:
   include:
     - os: linux
-      dist: bitonic
+      dist: bionic
     - os: osx
       osx_image: xcode11.4
 
@@ -10,14 +10,18 @@ branches:
   except:
     - /^example-/
 
+env:
+  global:
+    - MAKEFLAGS="-j8"
+
 before_install:
   - make clean
 
-after_install:
+before_script:
   - git version
 
 script:
   - make test
 
-notification:
+notifications:
   email: false
