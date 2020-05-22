@@ -162,6 +162,9 @@ curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | 
 mkdir -p ~/.local/bin/
 curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && sudo chmod 755 ~/.local/bin/git-get
 curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && sudo chmod 755 ~/.local/bin/git-gets
+# Or, install on macOS:
+curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/local/bin/git-get > /dev/null && sudo chmod 755 /usr/local/bin/git-get
+curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/local/bin/git-gets > /dev/null && sudo chmod 755 /usr/local/bin/git-gets
 ```
 
 You DO NOT need to setup `git config alias.get '!git-get'`.
@@ -174,11 +177,14 @@ git get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/bin/git-gets >/dev/null
 # Or, locally:
 git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
 git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
+# Or, upgrade on macOS:
+git get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/local/bin/git-get >/dev/null
+git get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/local/bin/git-gets >/dev/null
 ```
 
 ## Requirements
 
-* `Linux`
+* `Linux`/`macOS`
 * `git` **2.20+**, the newer the better
 * `bash`
 
