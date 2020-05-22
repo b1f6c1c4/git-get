@@ -188,7 +188,7 @@ got_repo() {
         else
             [ -z "$QUIET" ] && printf '%s %s %s %s\n' '---' "$PA" "$URL" "$SSHA1">&2
         fi
-    done 3< <(awk -F '"' '/^\[submodule / { print $2; }' "$GIT_DIR/config")
+    done 3< <(git config --local --get-regexp 'submodule.*.url' | cut -d '.' -f 2)
 
     wait
     if [ -z "$RAW" ]; then
