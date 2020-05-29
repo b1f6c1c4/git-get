@@ -24,7 +24,8 @@ usage()
 {
     cat - <<EOF
 git-get [-v|--verbose|-q|--quiet]
-    <url> | <user>/<repo> [<branch>|<sha1>]
+    <url> | <user>/<repo> [<branch>|<sha1>] |
+    [https://github.com/]<user>/<repo>/tree|blob/<branch>|<sha1>[/<path>]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
     [-g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 EOF
@@ -149,7 +150,7 @@ if [ "$#" -gt 0 ]; then
 fi
 
 if [ "${#POSITIONAL[@]}" -eq 0 ]; then
-    echo "Error: Must specify <repo-url> (any git remote) or <user>/<repo> (GitHub)"
+    echo "Error: Must specify <url> or <user>/<repo> (GitHub)"
     exit 1
 elif [ "${#POSITIONAL[@]}" -eq 1 ]; then
     BRANCH="HEAD"
@@ -160,26 +161,65 @@ else
     exit 1
 fi
 
-if [[ "${POSITIONAL[0]}" =~ ^https://github.com/ ]]; then
+resolve_gh_url() {
     GITHUB=YES
-    GH_REPO="${POSITIONAL[0]#https://github.com/}"
-    GH_REPO="${GH_REPO%.git}"
-    REPO="${POSITIONAL[0]}"
+    AMBI=
+    if grep -qP '^[^/]+/[^/]+$' <<<"$1"; then
+        GH_REPO="${1%.git}"
+    elif grep -qP '^[^/]+/[^/]+/tree/' <<<"$1"; then
+        if [ "${#POSITIONAL[@]}" -ne 1 ]; then
+            echo "Error: Branch is already specified in the URL" >&2
+            exit 1
+        fi
+        GH_REPO="$(grep -Po '^[^/]+/[^/]+(?=/tree/)' <<<"$1")"
+        BRANCH="$(sed -E 's_^[^/]+/[^/]+/tree/__' <<<"$1")"
+    elif grep -qP '^[^/]+/[^/]+/blob/' <<<"$1"; then
+        if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
+            echo "Error: Conflict: -g|--preserve-git and -- <path> (in the URL)" >&2
+            exit 1
+        fi
+        if [ "${#POSITIONAL[@]}" -ne 1 ]; then
+            echo "Error: Branch is already specified in the URL" >&2
+            exit 1
+        fi
+        GH_REPO="$(grep -Po '^[^/]+/[^/]+(?=/blob/)' <<<"$1")"
+        BRANCH="$(sed -E 's_^[^/]+/[^/]+/blob/__' <<<"$1")"
+        AMBI=YES
+    else
+        echo "Error: GitHub URL format not supported, only repo/tree/blob will work" >&2
+        exit 1
+    fi
+
+    if [ -n "$GH_USE_HTTPS" ]; then
+        REPO="https://github.com/$GH_REPO.git"
+    else
+        REPO="git@github.com:$GH_REPO.git"
+    fi
+
+    if [ -n "$AMBI" ]; then
+        while [[ "$BRANCH" =~ / ]]; do
+            if [ -n "$(git ls-remote "$REPO" "$BRANCH")" ]; then
+                break
+            fi
+            DIR="$(basename "$BRANCH")/$DIR"
+            BRANCH="$(dirname "$BRANCH")"
+        done
+    fi
+    unset AMBI
+}
+
+if [[ "${POSITIONAL[0]}" =~ ^https://github.com/ ]]; then
+    resolve_gh_url "${POSITIONAL[0]#https://github.com/}" YES
+    REPO="https://github.com/$GH_REPO.git"
 elif [[ "${POSITIONAL[0]}" =~ ^git@github.com: ]]; then
     GITHUB=YES
     GH_REPO="${POSITIONAL[0]#git@github.com:}"
     GH_REPO="${GH_REPO%.git}"
-    REPO="${POSITIONAL[0]}"
-elif [[ "${POSITIONAL[0]}" =~ ^.*/.*/.*$ ]]; then
+    REPO="git@github.com:$GH_REPO.git"
+elif [[ "${POSITIONAL[0]}" =~ : ]]; then
     REPO="${POSITIONAL[0]}"
 else
-    GITHUB=YES
-    GH_REPO="${POSITIONAL[0]}"
-    if [ -n "$GH_USE_HTTPS" ]; then
-        REPO="https://github.com/${POSITIONAL[0]}.git"
-    else
-        REPO="git@github.com:${POSITIONAL[0]}.git"
-    fi
+    resolve_gh_url "${POSITIONAL[0]}" "$GH_USE_HTTPS"
 fi
 
 DIR="$(normalize "$DIR")"

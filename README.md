@@ -12,11 +12,11 @@ git get <url> -t
 #     git -C repo rev-parse HEAD > repo/VERSION
 #     rm -rf repo/.git
 
-git get <url> -o <target> -- <file>
+git get <url> -o <output-file> -- <file>
 # is 1x~1000000x faster than:
 #     git clone <url> repo
 #     git -C repo submodule update --init --recursive
-#     cp repo/<file> <target> && rm -rf repo
+#     cp repo/<file> <output-file> && rm -rf repo
 
 git get <url> <commit> -- <file>
 # is 1x~1000000000x faster than:
@@ -41,6 +41,10 @@ git gets <url> <commit> -P --flat
 git gets
 # is 1x~10000000x faster than (and 8x shorter to type):
 #     git submodule update --init --recursive
+
+# You can also feed a GitHub web page url directly to git-get:
+git get -o <output-file> https://github.com/b1f6c1c4/git-get/blob/master/git-get
+git get -o <output-file> https://github.com/b1f6c1c4/git-get/tree/example-repo2/git-get/dir
 ```
 
 ## Why we need it, and why is it so fast?
@@ -110,8 +114,9 @@ interactively choose which dependency you want to install.
 The CLI is pretty self-explanatory:
 
 ```bash
-git get [-v|--verbose|-q|--quiet]
-    <url> | <user>/<repo> [<branch>|<sha1>]
+git-get [-v|--verbose|-q|--quiet]
+    <url> | <user>/<repo> [<branch>|<sha1>] |
+    [https://github.com/]<user>/<repo>/tree|blob/<branch>|<sha1>[/<path>]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
     [-g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 
