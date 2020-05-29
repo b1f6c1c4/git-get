@@ -1,3 +1,3 @@
-R="$(repo https://github.com/b1f6c1c4/git-get/blob/example-repo2/file -- file || echo good)"
+R="$(git-get https://github.com/b1f6c1c4/git-get/blob/example-repo2/file -- file || echo good)"
 
 [ "$R" = good ]

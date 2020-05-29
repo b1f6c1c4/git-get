@@ -173,8 +173,9 @@ resolve_gh_url() {
         fi
         GH_REPO="$(grep -Po '^[^/]+/[^/]+(?=/tree/)' <<<"$1")"
         BRANCH="$(sed -E 's_^[^/]+/[^/]+/tree/__' <<<"$1")"
+        AMBI=VERY_MUCH
     elif grep -qP '^[^/]+/[^/]+/blob/' <<<"$1"; then
-        if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
+        if [ -n "$PRESERVE" ]; then
             echo "Error: Conflict: -g|--preserve-git and -- <path> (in the URL)" >&2
             exit 1
         fi
@@ -190,7 +191,7 @@ resolve_gh_url() {
         exit 1
     fi
 
-    if [ -n "$GH_USE_HTTPS" ]; then
+    if [ -n "$2" ]; then
         REPO="https://github.com/$GH_REPO.git"
     else
         REPO="git@github.com:$GH_REPO.git"
