@@ -1,0 +1,16 @@
+git clone --depth=1 --branch example-repo2 https://github.com/b1f6c1c4/git-get.git repo
+
+echo a > repo/fo
+git -C repo add fo
+echo b > repo/fo
+
+R="$(cd repo && git-gets || echo good)"
+
+[ "$R" = good ]
+[ "$(cat repo/fo)" = b ]
+git -C repo restore --worktree fo
+[ "$(cat repo/fo)" = a ]
+rmdir repo/sub
+rmdir repo/xsub
+
+rm -rf repo

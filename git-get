@@ -350,7 +350,7 @@ got_repo() {
         ARGS=(git reset --hard)
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+        [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
         [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
         got_dir "$1" "$2" && exit 0
@@ -363,14 +363,14 @@ got_repo() {
             [ -n "$QUIET" ] && ARGS+=(-q)
             ARGS+=(-- ".gitmodules" "$P")
             [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-            [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+            [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
             [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
             ARGS=(git submodule)
             [ -n "$QUIET" ] && ARGS+=(--quiet)
             ARGS+=(init)
             [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-            [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+            [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
             [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
             while IFS= read -r -u 3 line; do
@@ -406,14 +406,14 @@ got_repo() {
         [ -n "$QUIET" ] && ARGS+=(-q)
         ARGS+=(-- "$DIR")
         [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+        [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
         ARGS=(git restore --worktree)
         [ -n "$QUIET" ] && ARGS+=(-q)
         ARGS+=(-- "$DIR")
         [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-        [   -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+        [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
         [ -f "$1/$DIR" ] && got_file "$1/$DIR" "$2"
         [ -d "$1/$DIR" ] && got_dir "$1/$DIR" "$2"

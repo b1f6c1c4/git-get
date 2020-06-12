@@ -105,7 +105,7 @@ got_repo() {
 
     ARGS=(git reset --hard)
     [ -n "$QUIET" ] && ARGS+=(-q)
-    [   -z "$QUIET" ] && "${ARGS[@]}" >&2
+    [ -z "$QUIET" ] && "${ARGS[@]}" >&2
     [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
 
@@ -123,7 +123,7 @@ got_repo() {
         [ -n "$QUIET" ] && ARGS+=(--quiet)
         ARGS+=(init)
         [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-        [   -z "$QUIET" ] && "${ARGS[@]}" >&2
+        [ -z "$QUIET" ] && "${ARGS[@]}" >&2
         [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     fi
 
@@ -196,7 +196,7 @@ got_repo() {
         [ -n "$QUIET" ] && ARGS+=(--quiet)
         ARGS+=(absorbgitdirs)
         [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-        [   -z "$QUIET" ] && "${ARGS[@]}" >&2
+        [ -z "$QUIET" ] && "${ARGS[@]}" >&2
         [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     fi
     if [ -z "$SUBMODULE_MODE" ]; then
@@ -397,6 +397,10 @@ if [ -n "$SUBMODULE_MODE" ]; then
     fi
 
     cd "$GIT_WORK_TREE"
+    if [ -n "$(git status --porcelain --untracked-files=no --ignore-submodules=all --ignored=no)" ]; then
+        echo "Error: Your stage / worktree is NOT clean. Too dangerous to proceed." >&2
+        exit 1
+    fi
     got_repo "$(git rev-parse HEAD)"
 
     exit 0
