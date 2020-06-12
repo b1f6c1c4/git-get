@@ -5,6 +5,9 @@ jobs:
       dist: bionic
     - os: osx
       osx_image: xcode11.4
+      install:
+        - brew install grep
+        - export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
 
 branches:
   except:
@@ -19,6 +22,7 @@ after_install:
 
 before_script:
   - git version
+  - grep --version
 
 script:
   - make test
