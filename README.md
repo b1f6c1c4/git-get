@@ -1,4 +1,4 @@
-# `git-get`: Blazingly fast `git clone`
+# `git-get`: Blazingly fast, incredibly handy `git clone`
 
 [![Linux and macOS Test Status](https://travis-ci.com/b1f6c1c4/git-get.svg?branch=master)](https://travis-ci.com/b1f6c1c4/git-get)
 [![Windows Test Status](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)](https://ci.appveyor.com/project/b1f6c1c4/git-get/branch/master)
@@ -7,19 +7,58 @@
 
 - Download a file:
     ```bash
-    git get https://github.com/b1f6c1c4/git-get/blob/master/git-get
+    # Method 1: Paste the original URL into the terminal:
+    git get https://github.com/b1f6c1c4/git-get/blob/master/README.md
+    # Method 2: Type a few words in the terminal:
+    git get b1f6c1c4/git-get -- README.md
     ```
 - Download a folder:
     ```bash
+    # The same as before:
     git get https://github.com/b1f6c1c4/git-get/tree/master/tests
+    git get b1f6c1c4/git-get -- tests
+    # Optionally, you may want a VERSION file to record the commit SHA1:
+    git get -t ...
     ```
-- Download a repo: (without -g, .git will be removed)
+- Download a repo/branch/tag/commit:
     ```bash
-    git get -g https://github.com/b1f6c1c4/git-get
+    # Also the same:
+    git get https://github.com/b1f6c1c4/git-get
+    git get https://github.com/b1f6c1c4/git-get/tree/example-repo2
+    git get https://github.com/b1f6c1c4/git-get/commit/2dd50b6
+    git get b1f6c1c4/git-get
+    git get b1f6c1c4/git-get example-repo2
+    git get b1f6c1c4/git-get 2dd50b6
+    # You may wonder where did the .git go.
+    # We automatically 'rm -rf .git' for you because in 95% of the cases
+    # you won't even look at it. But if you really want your .git back:
+    git get -g ...
     ```
-- Download a repo with submodules:
+- Download a file/folder of a branch/tag/commit:
     ```bash
+    # Combine what you've learned before:
+    git get https://github.com/b1f6c1c4/git-get/blob/example-repo2/file
+    git get https://github.com/b1f6c1c4/git-get/tree/example-repo2/dir
+    git get b1f6c1c4/git-get example-repo2 -- file
+    git get b1f6c1c4/git-get example-repo2 -- dir
+    # You *cannot* do -g and -t at the same time:
+    # git get -g -t ... # Error!!!
+    ```
+- Download a repo and submodules:
+    ```bash
+    # Just a tiny tiny change:
     git gets https://github.com/b1f6c1c4/git-get
+    git gets b1f6c1c4/git-get
+    # If you want it to be even faster:
+    git gets -P ...
+    # If you want to save disk space:
+    git gets --flat ... # 'rm -rf .git', the oposite of -g
+    ```
+- You already have a repo, and you want its submodules:
+    ```bash
+    git gets           # Just give me all
+    git gets -c        # Let me choose
+    git gets --no-init # Only those with 'git submodule init ...'
     ```
 
 ## Performance
