@@ -359,7 +359,9 @@ got_repo() {
         T="$(git --git-dir="$1/.git" ls-tree HEAD -- "$DIR" | cut -d ' ' -f 2)"
         [ -n "$VERBOSE" ] && printf 'Checking %q -> %s (%q) \n' "$DIR" "$T" "$P" >&2
         if [ "$T" = "commit" ]; then
-            ARGS=(git restore --source=HEAD --staged --worktree)
+            # To support legacy git, use git checkout here
+            # ARGS=(git restore --source=HEAD --staged --worktree)
+            ARGS=(git checkout HEAD)
             [ -n "$QUIET" ] && ARGS+=(-q)
             ARGS+=(-- ".gitmodules" "$P")
             [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
@@ -409,7 +411,9 @@ got_repo() {
         [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
-        ARGS=(git restore --worktree)
+        # To support legacy git, use git checkout here
+        # ARGS=(git restore --worktree)
+        ARGS=(git checkout)
         [ -n "$QUIET" ] && ARGS+=(-q)
         ARGS+=(-- "$DIR")
         [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
