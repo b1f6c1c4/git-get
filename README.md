@@ -5,6 +5,25 @@
 
 ## TL;DR
 
+- Download a file:
+    ```bash
+    git get https://github.com/b1f6c1c4/git-get/blob/master/git-get
+    ```
+- Download a folder:
+    ```bash
+    git get https://github.com/b1f6c1c4/git-get/tree/master/tests
+    ```
+- Download a repo: (without -g, .git will be removed)
+    ```bash
+    git get -g https://github.com/b1f6c1c4/git-get
+    ```
+- Download a repo with submodules:
+    ```bash
+    git gets https://github.com/b1f6c1c4/git-get
+    ```
+
+## Performance
+
 ```bash
 git get <url> -t
 # is 1x~10000x faster than:
@@ -41,10 +60,6 @@ git gets <url> <commit> -P --flat
 git gets
 # is 1x~10000000x faster than (and 8x shorter to type):
 #     git submodule update --init --recursive
-
-# You can also feed a GitHub web page url directly to git-get:
-git get -o <output-file> https://github.com/b1f6c1c4/git-get/blob/master/git-get
-git get -o <output-file> https://github.com/b1f6c1c4/git-get/tree/example-repo2/git-get/dir
 ```
 
 ## Why we need it, and why is it so fast?
@@ -116,7 +131,7 @@ The CLI is pretty self-explanatory:
 ```bash
 git-get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>] |
-    [https://github.com/]<user>/<repo>/tree|blob/<branch>|<sha1>[/<path>]
+    [https://github.com/]<user>/<repo>/commit|tree|blob/<branch>|<sha1>[/<path>]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
     [-g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 

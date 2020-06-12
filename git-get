@@ -25,7 +25,7 @@ usage()
     cat - <<EOF
 git-get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>] |
-    [https://github.com/]<user>/<repo>/tree|blob/<branch>|<sha1>[/<path>]
+    [https://github.com/]<user>/<repo>/commit|tree|blob/<branch>|<sha1>[/<path>]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
     [-g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 EOF
@@ -166,6 +166,13 @@ resolve_gh_url() {
     AMBI=
     if grep -qP '^[^/]+/[^/]+$' <<<"$1"; then
         GH_REPO="${1%.git}"
+    elif grep -qP '^[^/]+/[^/]+/commit/[0-9a-f]{4,40}$' <<<"$1"; then
+        if [ "${#POSITIONAL[@]}" -ne 1 ]; then
+            echo "Error: Commit is already specified in the URL" >&2
+            exit 1
+        fi
+        GH_REPO="$(grep -Po '^[^/]+/[^/]+(?=/commit/)' <<<"$1")"
+        BRANCH="$(sed -E 's_^[^/]+/[^/]+/commit/__' <<<"$1")"
     elif grep -qP '^[^/]+/[^/]+/tree/' <<<"$1"; then
         if [ "${#POSITIONAL[@]}" -ne 1 ]; then
             echo "Error: Branch is already specified in the URL" >&2
@@ -187,7 +194,7 @@ resolve_gh_url() {
         BRANCH="$(sed -E 's_^[^/]+/[^/]+/blob/__' <<<"$1")"
         AMBI=YES
     else
-        echo "Error: GitHub URL format not supported, only repo/tree/blob will work" >&2
+        echo "Error: GitHub URL format not supported, only repo/tree/blob/commit will work" >&2
         exit 1
     fi
 
@@ -221,6 +228,11 @@ elif [[ "${POSITIONAL[0]}" =~ : ]]; then
     REPO="${POSITIONAL[0]}"
 else
     resolve_gh_url "${POSITIONAL[0]}" "$GH_USE_HTTPS"
+fi
+
+if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
+    echo "Error: Can't use an URL (of a folder or file) with -g|--preserve-git" >&2
+    exit 1
 fi
 
 DIR="$(normalize "$DIR")"
