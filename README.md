@@ -229,7 +229,7 @@ In `git-gets`, `.git` is kept by default. You can override this with `--flat`.
 - MacOS
 
     ```bash
-    # Install dependencies, including readpath(1):
+    # Install dependencies, including realpath(1):
     brew install coreutils
     # Install git-get(1) globally:
     curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/local/bin/git-get > /dev/null && sudo chmod 755 /usr/local/bin/git-get
