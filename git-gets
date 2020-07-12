@@ -132,7 +132,11 @@ got_repo() {
     fi
 
     while IFS= read -r -u 3 line; do
-        PA="$(git -C "$GIT_WORK_TREE" config --file ".gitmodules" "submodule.$line.path")"
+        PA="$(git -C "$GIT_WORK_TREE" config --file ".gitmodules" "submodule.$line.path" || echo '')"
+        if [ -z "$PA" ]; then
+            [ -z "$QUIET" ] && printf 'Skipping %s because it does not appear in .gitmodules\n' "$PA" >&2
+            continue
+        fi
         URL="$(git config "submodule.$line.url")"
         if [ -z "$URL" ]; then
             [ -z "$QUIET" ] && printf 'Skipping %s because it has not been initialized\n' "$PA" >&2
