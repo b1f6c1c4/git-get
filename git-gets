@@ -30,7 +30,7 @@ usage()
 {
     cat - <<EOF
 git-gets [-v|--verbose|-q|--quiet] [--no-recursive]
-    <url> | <user>/<repo> [<branch>|<sha1>]
+    <url> | <user>/<repo> [<branch>|<tag>|<sha1>]
     [-o <target> | --output=<target>] [-F|--rm-rf]
     [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
 

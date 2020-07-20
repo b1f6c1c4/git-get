@@ -200,11 +200,11 @@ Without this file and without `.git` repo,
 others will lose track of where the code came from.
 
 * `-o|--output=<target>`, `-f|--force` and `-F|--rm-rf`:
-If you downloaded a file/directory and `<target>` is a file,
+If you downloaded a file/directory and `<target>` is an existing file,
 you may override the file with `-f|--force`.
-If you downloaded a file and `<target>` is a directory,
+If you downloaded a file and `<target>` is an existing directory,
 the file is put into the directory.
-If you downloaded a directory and `<target>` is a directory,
+If you downloaded a directory and `<target>` is an existing directory,
 you may override the directory with `-F|--rm-rf`.
 In no case will a directory be put into an existing directory.
 
