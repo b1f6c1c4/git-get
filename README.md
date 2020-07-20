@@ -216,7 +216,16 @@ In `git-gets`, `.git` is kept by default. You can override this with `--flat`.
 
 (The upgrading process and install process are identical.)
 
-- Linux
+- Arch Linux
+
+    It's on [AUR](https://aur.archlinux.org/packages/git-get):
+    ```bash
+    yay install git-get
+    rua install git-get
+    ...
+    ```
+
+- Linux but not Arch Linux
 
     We recommend that you download the latest release and untar the files:
     ```bash
