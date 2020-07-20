@@ -250,9 +250,9 @@ In fact, git is so smart that, as long as `git-get` is in `PATH`, `git <xyz>` wi
 
 * `bash`, can be `GNU bash` on Linux / MacOS, or `Git bash` on Windows
 * `git` **2.20+**, the newer the better
-* `grep` with `-P`
-    * On Linux: You should already have it installed.
-    * On MacOS:
+* `awk`, `sed`, and `grep` with `-P`
+    * On Linux: You should already have them installed.
+    * On MacOS: You need to install GNU grep:
         ```bash
         brew install grep
         export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
@@ -260,7 +260,7 @@ In fact, git is so smart that, as long as `git-get` is in `PATH`, `git <xyz>` wi
         ```
     * On Windows:
         ```bash
-        choco install grep
+        choco install grep awk sed
         ```
 
 ## License
