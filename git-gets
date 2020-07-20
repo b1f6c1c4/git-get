@@ -1,5 +1,7 @@
 #!/bin/bash
 
+GIT_GET_VERSION=
+
 if [ -z "$RAW" ]; then
     RAW=
 else
@@ -226,6 +228,10 @@ POSITIONAL=()
 while [ $# -gt 0 ]; do
     key="$1"
     case "$key" in
+        -V|--version)
+            echo "git-gets(1) $GIT_GET_VERSION"
+            exit
+            ;;
         -h|--help)
             usage
             exit

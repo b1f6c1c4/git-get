@@ -1,5 +1,7 @@
 #!/bin/bash
 
+GIT_GET_VERSION=
+
 if [ -z "$GH_USE_HTTPS" ]; then
     GH_USE_HTTPS=
 else
@@ -70,6 +72,10 @@ POSITIONAL=()
 while [ $# -gt 0 ]; do
     key="$1"
     case "$key" in
+        -V|--version)
+            echo "git-get(1) $GIT_GET_VERSION"
+            exit
+            ;;
         -h|--help)
             usage
             exit

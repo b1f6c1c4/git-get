@@ -212,18 +212,19 @@ In no case will a directory be put into an existing directory.
 In `git-get`, `.git` is removed by default. You can override this with `-g|--preserve-git`.
 In `git-gets`, `.git` is kept by default. You can override this with `--flat`.
 
-## Install
+## Install and Upgrade
+
+(The upgrading process and install process are identical.)
 
 - Linux
 
-    We recommend that you download the two scripts directly:
+    We recommend that you download the latest release and untar the files:
     ```bash
-    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/bin/git-get > /dev/null && sudo chmod 755 /usr/bin/git-get
-    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/bin/git-gets > /dev/null && sudo chmod 755 /usr/bin/git-gets
+    # Install git-get(1) globally:
+    curl -fsSL https://github.com/b1f6c1c4/git-get/releases/latest/download/git-get.tar.xz | sudo tar -C /usr -xJv
     # Or, locally:
-    mkdir -p ~/.local/bin/
-    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && chmod 755 ~/.local/bin/git-get
-    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && chmod 755 ~/.local/bin/git-gets
+    mkdir -p ~/.local/
+    curl -fsSL https://github.com/b1f6c1c4/git-get/releases/latest/download/git-get.tar.xz | tar -C ~/.local/ -xJv
     ```
 
 - MacOS
@@ -232,46 +233,18 @@ In `git-gets`, `.git` is kept by default. You can override this with `--flat`.
     # Install dependencies, including realpath(1):
     brew install coreutils
     # Install git-get(1) globally:
-    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | sudo tee /usr/local/bin/git-get > /dev/null && sudo chmod 755 /usr/local/bin/git-get
-    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | sudo tee /usr/local/bin/git-gets > /dev/null && sudo chmod 755 /usr/local/bin/git-gets
+    curl -fsSL https://github.com/b1f6c1c4/git-get/releases/latest/download/git-get.tar.xz | sudo tar -C /usr/local -xJv
     # Or, locally:
     mkdir -p ~/.local/bin/
-    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-get | tee ~/.local/bin/git-get > /dev/null && chmod 755 ~/.local/bin/git-get
-    curl -fsSL https://raw.githubusercontent.com/b1f6c1c4/git-get/master/git-gets | tee ~/.local/bin/git-gets > /dev/null && chmod 755 ~/.local/bin/git-gets
+    curl -fsSL https://github.com/b1f6c1c4/git-get/releases/latest/download/git-get.tar.xz | tar -C ~/.local/ -xJv
     ```
 
 - Windows
 
-    Similar as above, but you need to manually download the two files [git-get](https://github.com/b1f6c1c4/git-get/blob/master/git-get) and [git-gets](https://github.com/b1f6c1c4/git-get/blob/master/git-gets) and put it in `PATH`.
+    Similar as above, but you need to manually download the two files [git-get](https://github.com/b1f6c1c4/git-get/blob/master/git-get) and [git-gets](https://github.com/b1f6c1c4/git-get/blob/master/git-gets) and put it in `PATH`. As for the documentation, you will need to browse it online.
 
 You DO NOT need to setup `git config alias.get '!git-get'`.
 In fact, git is so smart that, as long as `git-get` is in `PATH`, `git <xyz>` will be interpreted as `git-<xyz>`.
-
-### Upgrading
-
-- Linux
-
-    ```bash
-    git get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/bin/git-get >/dev/null
-    git get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/bin/git-gets >/dev/null
-    # Or, locally:
-    git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
-    git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
-    ```
-
-- MacOS
-
-    ```bash
-    git get -o- b1f6c1c4/git-get -- git-get | sudo tee /usr/local/bin/git-get >/dev/null
-    git get -o- b1f6c1c4/git-get -- git-gets | sudo tee /usr/local/bin/git-gets >/dev/null
-    # Or, locally:
-    git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-get
-    git get -f -o ~/.local/bin/ b1f6c1c4/git-get -- git-gets
-    ```
-
-- Windows
-
-    Similar as above, use `git get` to upgrade itself.
 
 ## Requirements
 
