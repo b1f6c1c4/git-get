@@ -457,6 +457,15 @@ got_repo() {
 
         # git restore --worktree issue fetch-pack one-by-another
         # which is super slow
+
+        # This workaround fixes #8 (https://github.com/b1f6c1c4/git-get/issues/8)
+        # which is caused by https://github.com/git/git/commit/95acf11a3dc3d18ec999f4913ec6c6a54545c6b7
+        ARGS=(git diff-index HEAD --cached -p)
+        ARGS+=(-- "$DIR")
+        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >/dev/null)
+        [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >/dev/null)
+
         ARGS=(git reset HEAD)
         [ -n "$QUIET" ] && ARGS+=(-q)
         ARGS+=(-- "$DIR")
