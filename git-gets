@@ -34,10 +34,10 @@ usage()
 git-gets [-v|--verbose|-q|--quiet] [--no-recursive]
     <url> | <user>/<repo> [<branch>|<tag>|<sha1>]
     [-o <target> | --output=<target>] [-F|--rm-rf]
-    [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
+    [-x | --flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
 
 git-gets [-v|--verbose|-q|--quiet] [--no-recursive]
-    [-P|--parallel] [-c|--confirm] [--no-init]
+    [-x] [-P|--parallel] [-c|--confirm] [--no-init]
 EOF
 }
 
@@ -104,6 +104,13 @@ got_dir() {
 got_repo() {
     set -e
     git config core.repositoryformatversion 0
+    if [ -n "$XPRESERVE" ]; then
+        git config remote.origin.tagOpt --tags
+        git config --unset remote.origin.tagOpt
+        git config remote.origin.mirror false
+        git config --unset remote.origin.mirror
+        git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+    fi
 
     ARGS=(git reset --hard)
     [ -n "$QUIET" ] && ARGS+=(-q)
@@ -155,6 +162,7 @@ got_repo() {
         ARGS=("$0")
         [ -n "$VERBOSE" ] && ARGS+=(--verbose)
         [ -n "$QUIET" ] && ARGS+=(--quiet)
+        [ -n "$XPRESERVE" ] && ARGS+=(-x)
         [ -n "$PARALLEL" ] && ARGS+=(--parallel)
         [ -z "$PARALLEL" ] && [ -n "$CONFIRM" ] && ARGS+=(--confirm)
         [ -n "$NO_RECURSIVE" ] && ARGS+=(--no-recursive)
@@ -219,6 +227,7 @@ VERBOSE=
 FORCE_DIR=
 OUTPUT=
 FLAT=
+XPRESERVE=
 TAG_FILE=
 PARALLEL=
 CONFIRM=
@@ -255,6 +264,10 @@ while [ $# -gt 0 ]; do
             ;;
         -o-)
             OUTPUT="-"
+            shift
+            ;;
+        -x)
+            XPRESERVE=YES
             shift
             ;;
         --flat)
@@ -302,6 +315,10 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+if [ -n "$XPRESERVE" ] && [ -n "$FLAT" ]; then
+    echo "Error: Conflict: -x and --flat" >&2
+    exit 1
+fi
 
 if [ "${#POSITIONAL[@]}" -eq 0 ]; then
     if git rev-parse HEAD >/dev/null 2>&1; then
@@ -397,6 +414,7 @@ if [ -n "$SUBMODULE_MODE" ]; then
     if [ -n "$VERBOSE" ]; then
         printf 'RAW=%q\n' "$RAW" >&2
         printf 'FLAT=%q\n' "$FLAT" >&2
+        printf 'XPRESERVE=%q\n' "$XPRESERVE" >&2
         printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
         printf 'PARALLEL=%q\n' "$PARALLEL" >&2
         printf 'CONFIRM=%q\n' "$CONFIRM" >&2
@@ -457,6 +475,7 @@ if [ -n "$VERBOSE" ]; then
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
     printf 'FLAT=%q\n' "$FLAT" >&2
+    printf 'XPRESERVE=%q\n' "$XPRESERVE" >&2
     printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
     printf 'PARALLEL=%q\n' "$PARALLEL" >&2
     printf 'CONFIRM=%q\n' "$CONFIRM" >&2

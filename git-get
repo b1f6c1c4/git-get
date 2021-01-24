@@ -29,7 +29,7 @@ git-get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<tag>|<sha1>] |
     [https://github.com/]<user>/<repo>/commit|tree|blob/<branch>|<sha1>[/<path>]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
-    [-g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
+    [-x | -g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 EOF
 }
 
@@ -65,6 +65,7 @@ FORCE=
 FORCE_DIR=
 OUTPUT=
 PRESERVE=
+XPRESERVE=
 TAG=
 TAG_FILE=
 DIR=
@@ -106,6 +107,11 @@ while [ $# -gt 0 ]; do
             OUTPUT="-"
             shift
             ;;
+        -x)
+            XPRESERVE=YES
+            PRESERVE=YES
+            shift
+            ;;
         -g|--preserve-git)
             PRESERVE=YES
             shift
@@ -142,11 +148,11 @@ while [ $# -gt 0 ]; do
     esac
 done
 if [ -n "$PRESERVE" ] && [ -n "$TAG" ]; then
-    echo "Error: Conflict: -g|--preserve-git and --tag/--tag-file" >&2
+    echo "Error: Conflict: -x|-g|--preserve-git and --tag/--tag-file" >&2
     exit 1
 fi
 if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
-    echo "Error: Conflict: -g|--preserve-git and -- <path>" >&2
+    echo "Error: Conflict: -x|-g|--preserve-git and -- <path>" >&2
     exit 1
 fi
 
@@ -281,6 +287,7 @@ if [ -n "$VERBOSE" ]; then
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
     printf 'DEF_OUTPUT=%q\n' "$DEF_OUTPUT" >&2
     printf 'PRESERVE=%q\n' "$PRESERVE" >&2
+    printf 'XPRESERVE=%q\n' "$XPRESERVE" >&2
     printf 'TAG=%q\n' "$TAG" >&2
     printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
     printf 'GITHUB=%q\n' "$GITHUB" >&2
@@ -411,6 +418,13 @@ got_repo() {
         [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+        if [ -n "$XPRESERVE" ]; then
+            git --git-dir="$1/.git" config remote.origin.tagOpt --tags
+            git --git-dir="$1/.git" config --unset remote.origin.tagOpt
+            git --git-dir="$1/.git" config remote.origin.mirror false
+            git --git-dir="$1/.git" config --unset remote.origin.mirror
+            git --git-dir="$1/.git" config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+        fi
         [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
         got_dir "$1" "$2" && exit 0
     else
