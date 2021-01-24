@@ -56,6 +56,30 @@ you may override the directory with \fB-F\fR\&.
 In no case will a directory be put into an existing directory\&.
 .RE
 .PP
+-x
+.RS 4
+Make the downloaded repository look as similar as one
+created by an ordinary \fBgit clone\fR at the cost of a little bit
+more network bandwidth and disk space.
+This option implies that \fB.git\fR is NOT removed (see below), i.e. \fB-g\fR is implied.
+Specifically, using \fB-x\fR has the following effects:
+.IP \[bu] 2
+All commits will be downloaded: you can still view the full history
+when doing a normal \fBgit log\fR.
+.IP \[bu]
+All trees and blobs will be lazy loaded: they won't be downloaded
+until you explicitly checkout / switch / show it.
+Thus, running \fBgit log -p\fR or \fBgit log --stat\fR WITHOUT ANY RESTRICTION
+will trigger downloading the WHOLE REPOSITORY, an absolute disaster.
+.IP \[bu]
+\fBgit fetch\fR, \fBgit pull\fR, and \fBgit push\fR will behave (mostly) normal,
+instead of mirroring by default.
+To take a deeper look on this, please read the following reference:
+.I git-partial-clone
+.UR https://git-scm.com/docs/partial-clone
+.UE .
+.RE
+.PP
 -g, --preserve-git
 .RS 4
 The whole git repository \fB.git\fR is removed by default to save disk space
@@ -125,7 +149,7 @@ $ git get b1f6c1c4/git-get 2dd50b6
 You may wonder where did the .git go.
 We automatically 'rm -rf .git' for you because in 95% of the cases
 you won't even look at it. But if you really want your .git back:
-$ git get -g ...
+$ git get -x ...
 .fi
 .if n \{\
 .RE
@@ -144,8 +168,8 @@ $ git get https://github.com/b1f6c1c4/git-get/tree/example-repo2/dir
 $ git get b1f6c1c4/git-get example-repo2 -- file
 $ git get b1f6c1c4/git-get example-repo2 -- dir
 .sp
-You \fBcannot\fR do -g and -t at the same time:
-# git get -g -t ... # Error!!!
+You \fBcannot\fR do -x and -t at the same time:
+# git get -x -t ... # Error!!!
 .fi
 .if n \{\
 .RE

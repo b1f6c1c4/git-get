@@ -51,14 +51,16 @@
     git gets b1f6c1c4/git-get
     # If you want it to be even faster:
     git gets -P ...
+    # If you want to make changes and push back:
+    git gets -x ...
     # If you want to save disk space:
-    git gets --flat ... # 'rm -rf .git', the oposite of -x
+    git gets --flat ...   # Automatic 'rm -rf .git', the oposite of -x
     ```
 - You already have a repo, and you want its submodules:
     ```bash
-    git gets           # Just give me all
-    git gets -c        # Let me choose
-    git gets --no-init # Only those with 'git submodule init ...'
+    git gets -x           # Just give me all
+    git gets -x -c        # Let me choose
+    git gets -x --no-init # Only those with 'git submodule init ...'
     ```
 
 ## Performance
