@@ -262,10 +262,6 @@ while [ $# -gt 0 ]; do
             shift
             shift
             ;;
-        -o-)
-            OUTPUT="-"
-            shift
-            ;;
         -x)
             XPRESERVE=YES
             shift
@@ -308,6 +304,12 @@ while [ $# -gt 0 ]; do
                 OUTPUT="${1#--output=}"
             elif [[ "$1" =~ ^-o= ]]; then
                 OUTPUT="${1#-o=}"
+            elif [[ "$1" =~ ^-o ]]; then
+                OUTPUT="${1#-o}"
+            elif [[ "$1" =~ ^- ]]; then
+                T="$1"
+                shift
+                set -- '' "${T:0:2}" "-${T:2}" "$@"
             else
                 POSITIONAL+=("$1")
             fi

@@ -42,7 +42,7 @@
     git get b1f6c1c4/git-get example-repo2 -- file
     git get b1f6c1c4/git-get example-repo2 -- dir
     # You *cannot* do -x and -t at the same time:
-    # git get -x -t ... # Error!!!
+    # git get -xt ... # Error!!!
     ```
 - Download a repo and submodules:
     ```bash
@@ -59,7 +59,7 @@
 - You already have a repo, and you want its submodules:
     ```bash
     git gets -x           # Just give me all
-    git gets -x -c        # Let me choose
+    git gets -xc          # Let me choose
     git gets -x --no-init # Only those with 'git submodule init ...'
     ```
 
