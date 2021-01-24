@@ -32,7 +32,7 @@
     # You may wonder where did the .git go.
     # We automatically 'rm -rf .git' for you because in 95% of the cases
     # you won't even look at it. But if you really want your .git back:
-    git get -g ...
+    git get -x ...
     ```
 - Download a file/folder of a branch/tag/commit:
     ```bash
@@ -41,8 +41,8 @@
     git get https://github.com/b1f6c1c4/git-get/tree/example-repo2/dir
     git get b1f6c1c4/git-get example-repo2 -- file
     git get b1f6c1c4/git-get example-repo2 -- dir
-    # You *cannot* do -g and -t at the same time:
-    # git get -g -t ... # Error!!!
+    # You *cannot* do -x and -t at the same time:
+    # git get -x -t ... # Error!!!
     ```
 - Download a repo and submodules:
     ```bash
@@ -52,7 +52,7 @@
     # If you want it to be even faster:
     git gets -P ...
     # If you want to save disk space:
-    git gets --flat ... # 'rm -rf .git', the oposite of -g
+    git gets --flat ... # 'rm -rf .git', the oposite of -x
     ```
 - You already have a repo, and you want its submodules:
     ```bash
