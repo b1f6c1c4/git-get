@@ -6,5 +6,8 @@ R="$(git-get https://github.com/b1f6c1c4/git-get/tree/example-repo2 --preserve-g
 [ -x git-get/file ]
 [ -d git-get/dir ]
 [ -f git-get/dir/file-in-dir ]
+[ "$(git -C git-get config --get remote.origin.tagOpt)" = "--no-tags" ]
+[ -z "$(git -C git-get config --get remote.origin.mirror)" ]
+[ -z "$(git -C git-get config --get remote.origin.fetch)" ]
 
 rm -rf git-get
