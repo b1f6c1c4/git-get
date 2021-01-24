@@ -5,7 +5,15 @@ R="$(cd repo && git-gets --no-init)"
 
 [ -z "$R" ]
 rmdir repo/sub
+
 [ "$(git -C repo/xsub rev-parse HEAD)" = "2c0d59d84b729758f978c827a47980946f9a0e99" ]
+[ -z "$(git -C repo/xsub config --get remote.origin.tagOpt)" ]
+[ "$(git -C repo/xsub config --get remote.origin.mirror)" = "true" ]
+[ "$(git -C repo/xsub config --get remote.origin.fetch)" = "+refs/*:refs/*" ]
+
 [ "$(git -C repo/xsub/sub rev-parse HEAD)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
+[ -z "$(git -C repo/xsub/sub config --get remote.origin.tagOpt)" ]
+[ "$(git -C repo/xsub/sub config --get remote.origin.mirror)" = "true" ]
+[ "$(git -C repo/xsub/sub config --get remote.origin.fetch)" = "+refs/*:refs/*" ]
 
 rm -rf repo

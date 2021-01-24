@@ -1,0 +1,3 @@
+R="$(git-gets b1f6c1c4/git-get example-repo2 -x --flat || echo good)"
+
+[ "$R" = "good" ]

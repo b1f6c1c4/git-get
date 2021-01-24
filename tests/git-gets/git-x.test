@@ -1,21 +1,21 @@
 git clone --depth=1 --branch example-repo2 https://github.com/b1f6c1c4/git-get.git repo
 
-R="$(cd repo && git-gets)"
+R="$(cd repo && git-gets -x)"
 
 [ -z "$R" ]
 [ "$(git -C repo/sub rev-parse HEAD)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
 [ -z "$(git -C repo/sub config --get remote.origin.tagOpt)" ]
-[ "$(git -C repo/sub config --get remote.origin.mirror)" = "true" ]
-[ "$(git -C repo/sub config --get remote.origin.fetch)" = "+refs/*:refs/*" ]
+[ -z "$(git -C repo/sub config --get remote.origin.mirror)" ]
+[ "$(git -C repo/sub config --get remote.origin.fetch)" = "+refs/heads/*:refs/remotes/origin/*" ]
 
 [ "$(git -C repo/xsub rev-parse HEAD)" = "2c0d59d84b729758f978c827a47980946f9a0e99" ]
 [ -z "$(git -C repo/xsub config --get remote.origin.tagOpt)" ]
-[ "$(git -C repo/xsub config --get remote.origin.mirror)" = "true" ]
-[ "$(git -C repo/xsub config --get remote.origin.fetch)" = "+refs/*:refs/*" ]
+[ -z "$(git -C repo/xsub config --get remote.origin.mirror)" ]
+[ "$(git -C repo/xsub config --get remote.origin.fetch)" = "+refs/heads/*:refs/remotes/origin/*" ]
 
 [ "$(git -C repo/xsub/sub rev-parse HEAD)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
 [ -z "$(git -C repo/xsub/sub config --get remote.origin.tagOpt)" ]
-[ "$(git -C repo/xsub/sub config --get remote.origin.mirror)" = "true" ]
-[ "$(git -C repo/xsub/sub config --get remote.origin.fetch)" = "+refs/*:refs/*" ]
+[ -z "$(git -C repo/xsub/sub config --get remote.origin.mirror)" ]
+[ "$(git -C repo/xsub/sub config --get remote.origin.fetch)" = "+refs/heads/*:refs/remotes/origin/*" ]
 
 rm -rf repo
