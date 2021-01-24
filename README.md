@@ -172,15 +172,15 @@ git-get [-v|--verbose|-q|--quiet]
     <url> | <user>/<repo> [<branch>|<sha1>] |
     [https://github.com/]<user>/<repo>/commit|tree|blob/<branch>|<sha1>[/<path>]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
-    [-g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
+    [-x | -g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 
 git gets [-v|--verbose|-q|--quiet] [--no-recursive]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [-o <target> | --output=<target>] [-F|--rm-rf]
-    [--flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
+    [-x | --flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
 
 git gets [-v|--verbose|-q|--quiet] [--no-recursive]
-    [-P|--parallel] [-c|--confirm] [--no-init]
+    [-x] [-P|--parallel] [-c|--confirm] [--no-init]
 ```
 
 Some comments:
@@ -207,6 +207,28 @@ the file is put into the directory.
 If you downloaded a directory and `<target>` is an existing directory,
 you may override the directory with `-F|--rm-rf`.
 In no case will a directory be put into an existing directory.
+
+* `-x`:
+Make the downloaded repository look as similar as one
+created by an ordinary `git clone` at the cost of a little bit
+more network bandwidth and disk space.
+This option implies that `.git` is NOT removed (see below), i.e.
+`-g` is implied for `git-get` and `--flat` is disabled for `git-gets`.
+Specifically, using `-x` has the following effects:
+
+    - All commits will be downloaded: you can still view the full history
+    when doing a normal `git log`.
+
+    - All trees and blobs will be lazy loaded: they won't be downloaded
+    until you explicitly checkout / switch / show it.
+    Thus, running `git log -p` or `git log --stat` WITHOUT ANY RESTRICTION
+    will trigger downloading the WHOLE REPOSITORY, an absolute disaster.
+
+    - `git fetch`, `git pull`, and `git push` will behave (mostly) normal,
+    instead of mirroring by default.
+
+    To take a deeper look on this, please read the following reference:
+    [git partial clone](https://git-scm.com/docs/partial-clone).
 
 * `-g|--preserve-git` and `--flat`:
 In `git-get`, `.git` is removed by default. You can override this with `-g|--preserve-git`.
