@@ -414,10 +414,17 @@ got_repo() {
         [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
         got_dir "$1" "$2" && exit 0
     else
-        P="$(git --git-dir="$1/.git" ls-tree HEAD -- "$DIR" | cut -d $'\t' -f 2)"
-        T="$(git --git-dir="$1/.git" ls-tree HEAD -- "$DIR" | cut -d ' ' -f 2)"
-        [ -n "$VERBOSE" ] && printf 'Checking %q -> %s (%q) \n' "$DIR" "$T" "$P" >&2
-        if [ "$T" = "commit" ]; then
+        # This workaround fixes #14 (https://github.com/b1f6c1c4/git-get/issues/14)
+        # which is caused by https://github.com/git/git/commit/35a9f1e99c5d31635bb78a4f2d498e72c04fc471
+        P=""
+        while IFS= read -r -u 3 line; do
+            TP="$(cut -d $'\t' -f 2 <<<"$line")"
+            if [ "$TP" = "$DIR" ] || [ ! "${DIR#${TP}/}" = "$DIR" ]; then
+                P="$TP"
+            fi
+        done 3< <(git --git-dir="$1/.git" ls-tree HEAD -r | grep '^160000 commit ')
+        if [ -n "$P" ]; then
+            [ -n "$VERBOSE" ] && printf 'Checking %q -> %s (%q) \n' "$DIR" "commit" "$P" >&2
             # To support legacy git, use git checkout here
             # ARGS=(git restore --source=HEAD --staged --worktree)
             ARGS=(git checkout HEAD)
