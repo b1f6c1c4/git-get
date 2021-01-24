@@ -524,8 +524,10 @@ if git_new; then
             if [ -n "$SHA1" ]; then
                 [ -z "$QUIET" ] && printf 'Got SHA1: %q\n' "$SHA1" >&2
                 set -e
-                git --git-dir="$BASENAME/.git" update-ref --no-deref HEAD "$SHA1"
-                got_repo "$BASENAME" "$SHA1"
+                NSHA1="$(git --git-dir="$BASENAME/.git" rev-parse "$SHA1^{commit}")"
+                [ ! "$SHA1" = "$NSHA1" ] && printf 'Got actual SHA1: %q\n' "$NSHA1" >&2
+                git --git-dir="$BASENAME/.git" update-ref --no-deref HEAD "$NSHA1"
+                got_repo "$BASENAME" "$NSHA1"
             fi
         fi
         set -e
