@@ -195,7 +195,7 @@ else
 fi
 
 resolve_gh_url() {
-    GITHUB=YES
+    GITHUB=REPO
     AMBI=
     if grep -qP '^[^/]+/[^/]+$' <<<"$1"; then
         GH_REPO="${1%.git}"
@@ -249,63 +249,38 @@ resolve_gh_url() {
     unset AMBI
 }
 
-if [[ "${POSITIONAL[0]}" =~ ^https://github.com/ ]]; then
-    resolve_gh_url "${POSITIONAL[0]#https://github.com/}" YES
-    if [ -z "$GH_USE_SSH" ]; then
-        REPO="https://github.com/$GH_REPO.git"
+match_gh_url() {
+    [[ ! "${POSITIONAL[0]}" =~ ^$1 ]] && return 1
+    [ -z "$2" ] && [ -z "$QUIET" ] && echo "Warning: $1 is an unencryped protocol" >&2
+    if [ -n "$3" ]; then
+        "$3" "${POSITIONAL[0]#${1}}" YES
     else
-        REPO="git@github.com:$GH_REPO.git"
+        GITHUB=REPO
+        GH_REPO="${POSITIONAL[0]#${1}}"
+        GH_REPO="${GH_REPO%/}"
+        GH_REPO="${GH_REPO%.git}"
     fi
-elif [[ "${POSITIONAL[0]}" =~ ^http://github.com/ ]]; then
-    [ -z "$QUIET" ] && echo 'Warning: http:// is an unencryped protocol' >&2
-    resolve_gh_url "${POSITIONAL[0]#http://github.com/}" YES
     if [ -n "$GH_USE_HTTPS" ]; then
         REPO="https://github.com/$GH_REPO.git"
     elif [ -n "$GH_USE_SSH" ]; then
         REPO="git@github.com:$GH_REPO.git"
     else
-        REPO="http://github.com/$GH_REPO.git"
+        REPO="$1$GH_REPO.git"
     fi
-elif [[ "${POSITIONAL[0]}" =~ ^git://github.com/ ]]; then
-    [ -z "$QUIET" ] && echo 'Warning: git:// is an unencryped protocol' >&2
-    GITHUB=YES
-    GH_REPO="${POSITIONAL[0]#git://github.com/}"
-    GH_REPO="${GH_REPO%/}"
-    GH_REPO="${GH_REPO%.git}"
-    if [ -n "$GH_USE_HTTPS" ]; then
-        REPO="https://github.com/$GH_REPO.git"
-    elif [ -n "$GH_USE_SSH" ]; then
-        REPO="git@github.com:$GH_REPO.git"
+}
+
+match_gh_url "https://github.com/" '' resolve_gh_url ||
+    match_gh_url "http://github.com/" YES resolve_gh_url ||
+    match_gh_url "git://github.com/" YES '' ||
+    match_gh_url "ssh://git@github.com/" '' '' ||
+    match_gh_url "git@github.com:" '' '' ||
+    if [[ "${POSITIONAL[0]}" =~ : ]]; then
+        GITHUB=
+        GH_REPO=
+        REPO="${POSITIONAL[0]}"
     else
-        REPO="git://github.com/$GH_REPO.git"
+        resolve_gh_url "${POSITIONAL[0]}" ''
     fi
-elif [[ "${POSITIONAL[0]}" =~ ^ssh://git@github.com/ ]]; then
-    GITHUB=YES
-    GH_REPO="${POSITIONAL[0]#ssh://git@github.com/}"
-    GH_REPO="${GH_REPO%/}"
-    GH_REPO="${GH_REPO%.git}"
-    if [ -z "$GH_USE_HTTPS" ]; then
-        REPO="ssh://git@github.com/$GH_REPO.git"
-    else
-        REPO="https://github.com/$GH_REPO.git"
-    fi
-elif [[ "${POSITIONAL[0]}" =~ ^git@github.com: ]]; then
-    GITHUB=YES
-    GH_REPO="${POSITIONAL[0]#git@github.com:}"
-    GH_REPO="${GH_REPO%/}"
-    GH_REPO="${GH_REPO%.git}"
-    if [ -z "$GH_USE_HTTPS" ]; then
-        REPO="git@github.com:$GH_REPO.git"
-    else
-        REPO="https://github.com/$GH_REPO.git"
-    fi
-elif [[ "${POSITIONAL[0]}" =~ : ]]; then
-    GITHUB=
-    GH_REPO=
-    REPO="${POSITIONAL[0]}"
-else
-    resolve_gh_url "${POSITIONAL[0]}" ''
-fi
 
 if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
     echo "Error: Can't use an URL (of a folder or file) with -g|--preserve-git" >&2

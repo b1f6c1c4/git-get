@@ -460,20 +460,11 @@ if [ -n "$NO_INIT" ]; then
     exit 1
 fi
 
-if [[ "${POSITIONAL[0]}" =~ ^https://github.com/ ]]; then
-    GITHUB=YES
-    GH_REPO="${POSITIONAL[0]#https://github.com/}"
-    GH_REPO="${GH_REPO%/}"
-    GH_REPO="${GH_REPO%.git}"
-    if [ -z "$GH_USE_SSH" ]; then
-        REPO="https://github.com/$GH_REPO.git"
-    else
-        REPO="git@github.com:$GH_REPO.git"
-    fi
-elif [[ "${POSITIONAL[0]}" =~ ^http://github.com/ ]]; then
-    [ -z "$QUIET" ] && echo 'Warning: http:// is an unencryped protocol' >&2
-    GITHUB=YES
-    GH_REPO="${POSITIONAL[0]#http://github.com/}"
+match_gh_url() {
+    [[ ! "${POSITIONAL[0]}" =~ ^$1 ]] && return 1
+    [ -z "$2" ] && [ -z "$QUIET" ] && echo "Warning: $1 is an unencryped protocol" >&2
+    GITHUB=REPO
+    GH_REPO="${POSITIONAL[0]#${1}}"
     GH_REPO="${GH_REPO%/}"
     GH_REPO="${GH_REPO%.git}"
     if [ -n "$GH_USE_HTTPS" ]; then
@@ -481,54 +472,28 @@ elif [[ "${POSITIONAL[0]}" =~ ^http://github.com/ ]]; then
     elif [ -n "$GH_USE_SSH" ]; then
         REPO="git@github.com:$GH_REPO.git"
     else
-        REPO="http://github.com/$GH_REPO.git"
+        REPO="$1$GH_REPO.git"
     fi
-elif [[ "${POSITIONAL[0]}" =~ ^git://github.com/ ]]; then
-    [ -z "$QUIET" ] && echo 'Warning: git:// is an unencryped protocol' >&2
-    GITHUB=YES
-    GH_REPO="${POSITIONAL[0]#git://github.com/}"
-    GH_REPO="${GH_REPO%/}"
-    GH_REPO="${GH_REPO%.git}"
-    if [ -n "$GH_USE_HTTPS" ]; then
-        REPO="https://github.com/$GH_REPO.git"
-    elif [ -n "$GH_USE_SSH" ]; then
-        REPO="git@github.com:$GH_REPO.git"
+}
+
+match_gh_url "https://github.com/" '' resolve_gh_url ||
+    match_gh_url "http://github.com/" YES resolve_gh_url ||
+    match_gh_url "git://github.com/" YES '' ||
+    match_gh_url "ssh://git@github.com/" '' '' ||
+    match_gh_url "git@github.com:" '' '' ||
+    if [[ "${POSITIONAL[0]}" =~ ^.*/.*/.*$ ]]; then
+        GITHUB=
+        GH_REPO=
+        REPO="${POSITIONAL[0]}"
     else
-        REPO="git://github.com/$GH_REPO.git"
+        GITHUB=REPO
+        GH_REPO="${POSITIONAL[0]}"
+        if [ -n "$GH_USE_HTTPS" ]; then
+            REPO="https://github.com/${POSITIONAL[0]}.git"
+        else
+            REPO="git@github.com:${POSITIONAL[0]}.git"
+        fi
     fi
-elif [[ "${POSITIONAL[0]}" =~ ^ssh://git@github.com/ ]]; then
-    GITHUB=YES
-    GH_REPO="${POSITIONAL[0]#ssh://git@github.com/}"
-    GH_REPO="${GH_REPO%/}"
-    GH_REPO="${GH_REPO%.git}"
-    if [ -z "$GH_USE_HTTPS" ]; then
-        REPO="ssh://git@github.com/$GH_REPO.git"
-    else
-        REPO="https://github.com/$GH_REPO.git"
-    fi
-elif [[ "${POSITIONAL[0]}" =~ ^git@github.com: ]]; then
-    GITHUB=YES
-    GH_REPO="${POSITIONAL[0]#git@github.com:}"
-    GH_REPO="${GH_REPO%/}"
-    GH_REPO="${GH_REPO%.git}"
-    if [ -z "$GH_USE_HTTPS" ]; then
-        REPO="git@github.com:$GH_REPO.git"
-    else
-        REPO="https://github.com/$GH_REPO.git"
-    fi
-elif [[ "${POSITIONAL[0]}" =~ ^.*/.*/.*$ ]]; then
-    GITHUB=
-    GH_REPO=
-    REPO="${POSITIONAL[0]}"
-else
-    GITHUB=YES
-    GH_REPO="${POSITIONAL[0]}"
-    if [ -n "$GH_USE_HTTPS" ]; then
-        REPO="https://github.com/${POSITIONAL[0]}.git"
-    else
-        REPO="git@github.com:${POSITIONAL[0]}.git"
-    fi
-fi
 
 BASENAME="$(basename "$REPO")"
 BASENAME="${BASENAME%.git}"
