@@ -116,7 +116,10 @@ got_repo() {
         git config remote.origin.mirror false
         git config --unset remote.origin.mirror
         git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-        git fetch origin
+        ARGS=(git fetch origin)
+        [ -n "$QUIET" ] && ARGS+=(-q)
+        [ -z "$QUIET" ] && "${ARGS[@]}" >&2
+        [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
         if git show-ref --verify "refs/heads/$BRANCH" >/dev/null 2>/dev/null; then
             [ -n "$VERBOSE" ] && echo "Set branch: refs/heads/$BRANCH" >&2
             SET_BR=YES
@@ -125,9 +128,16 @@ got_repo() {
             SET_BR=
         fi
         git update-ref --stdin <ref-del
-        git fetch origin
+        ARGS=(git fetch origin)
+        [ -n "$QUIET" ] && ARGS+=(-q)
+        [ -z "$QUIET" ] && "${ARGS[@]}" >&2
+        [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
         if [ -n "$SET_BR" ]; then
-            git branch -f "$BRANCH" "refs/remotes/origin/$BRANCH" >&2
+            ARGS=(git branch -f "$BRANCH")
+            ARGS+=("refs/remotes/origin/$BRANCH")
+            [ -n "$QUIET" ] && ARGS+=(-q)
+            [ -z "$QUIET" ] && "${ARGS[@]}" >&2
+            [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
             git symbolic-ref HEAD "refs/heads/$BRANCH"
         fi
     fi
