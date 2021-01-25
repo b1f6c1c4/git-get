@@ -1,0 +1,6 @@
+R="$(git-get https://gist.github.com/b1f6c1c4/861f29441b09e22c161fa9cce6be7f53\#file-file2)"
+
+[ -z "$R" ]
+[ -x file2 ]
+
+rm file2

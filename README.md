@@ -200,8 +200,7 @@ Finer control is feasible using `--confirm`.
 
 * `-s|--ssh` and `-H|--https`:
 Switch between SSH protocol and HTTPS protocol when accessing GitHub.
-By default, whatever you've written in `<url>` will be used;
-if you use the abbreviation `<user>/<repo>`, ssh will be used.
+By default, ssh will be used to access github.com (including gist.github.com).
 However, SSH may fail if you are on a machine
 without any ssh keypair that can be used to connect to GitHub.
 You can manually change such behaviors by `-H`.

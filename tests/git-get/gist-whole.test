@@ -1,0 +1,11 @@
+R="$(git-get https://gist.github.com/b1f6c1c4/861f29441b09e22c161fa9cce6be7f53)"
+
+[ -z "$R" ]
+[ -f 861f29441b09e22c161fa9cce6be7f53/file1 ]
+[ -x 861f29441b09e22c161fa9cce6be7f53/file2 ]
+[ -L 861f29441b09e22c161fa9cce6be7f53/link ]
+
+rm 861f29441b09e22c161fa9cce6be7f53/file1
+rm 861f29441b09e22c161fa9cce6be7f53/file2
+unlink 861f29441b09e22c161fa9cce6be7f53/link
+rmdir 861f29441b09e22c161fa9cce6be7f53
