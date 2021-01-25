@@ -76,6 +76,7 @@ make the downloaded repository look as similar as one
 created by an ordinary \fBgit clone\fR at the cost of a little bit
 more network bandwidth and disk space.
 You cannot use it together with \fB-g\fR nor \fB-t\fR.
+Besides, you cannot use \fB-- <path>\fR when \fB-x\fR is set.
 Specifically, using \fB-x\fR has the following effects:
 .IP \[bu] 2
 All commits will be downloaded: you can still view the full history
@@ -104,6 +105,7 @@ cost compared to that with neither of \fB-x\fR nor \fB-g\fR.
 However, the actual respository may not be as exploitable as before.
 See the discussion of \fB-x\fR to see the difference.
 You cannot use it together with \fB-x\fR nor \fB-t\fR.
+Besides, you cannot use \fB-- <path>\fR when \fB-g\fR is set.
 .RE
 .PP
 -t, --tag-file=VERSION

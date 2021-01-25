@@ -336,6 +336,10 @@ while [ $# -gt 0 ]; do
             NO_RECURSIVE=YES
             shift
             ;;
+        --flat)
+            echo "Error: --flat is no longer supported. Please see man git-gets for more information." >&1
+            exit 1
+            ;;
         *)
             if [[ "$1" =~ ^-j ]]; then
                 PARALLEL="${1#-j}"
@@ -350,10 +354,13 @@ while [ $# -gt 0 ]; do
                 OUTPUT="${1#-o=}"
             elif [[ "$1" =~ ^-o ]]; then
                 OUTPUT="${1#-o}"
-            elif [[ "$1" =~ ^- ]]; then
+            elif [[ "$1" =~ ^-.. ]]; then
                 T="$1"
                 shift
                 set -- '' "${T:0:2}" "-${T:2}" "$@"
+            elif [[ "$1" =~ ^- ]]; then
+                echo "Error: Unrecognized argument $1" >&1
+                exit 1
             else
                 POSITIONAL+=("$1")
             fi
