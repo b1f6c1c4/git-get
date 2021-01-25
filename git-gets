@@ -35,15 +35,7 @@ set -euo pipefail
 
 usage()
 {
-    cat - <<EOF
-git-gets [-v|--verbose|-q|--quiet] [--no-recursive] [-s|--ssh | -H|--https]
-    <url> | <user>/<repo> [<branch>|<tag>|<sha1>]
-    [-o <target> | --output=<target>] [-F|--rm-rf]
-    [-x | --flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
-
-git-gets [-v|--verbose|-q|--quiet] [--no-recursive] [-s|--ssh | -H|--https]
-    [-x] [-P|--parallel] [-c|--confirm] [--no-init]
-EOF
+    exec man git-gets
 }
 
 git_new() {
@@ -109,7 +101,7 @@ got_dir() {
 got_repo() {
     set -e
     git config core.repositoryformatversion 0
-    if [ -n "$XPRESERVE" ] && [ -z "$SUBMODULE_MODE" ]; then
+    if [ "$PRESERVE" = X ] && [ -z "$SUBMODULE_MODE" ]; then
         git for-each-ref --format='delete %(refname)' >ref-del
         git config remote.origin.tagOpt --tags
         git config --unset remote.origin.tagOpt
@@ -150,7 +142,7 @@ got_repo() {
 
     if [ -n "$RAW" ] && [ -n "$NO_RECURSIVE" ]; then
         if [ -z "$SUBMODULE_MODE" ]; then
-            [ -n "$FLAT" ] && mv "$GIT_DIR" ".git"
+            [ -z "$PRESERVE" ] && mv "$GIT_DIR" ".git"
             got_dir "$GIT_WORK_TREE" "$1"
         else
             exit 0
@@ -192,7 +184,7 @@ got_repo() {
         ARGS=("$0")
         [ -n "$VERBOSE" ] && ARGS+=(--verbose)
         [ -n "$QUIET" ] && ARGS+=(--quiet)
-        [ -n "$XPRESERVE" ] && ARGS+=(-x)
+        [ "$PRESERVE" = X ] && ARGS+=(-x) || ARGS+=(-g)
         [ -n "$PARALLEL" ] && ARGS+=(--parallel)
         [ -z "$PARALLEL" ] && [ -n "$CONFIRM" ] && ARGS+=(--confirm)
         [ -n "$NO_RECURSIVE" ] && ARGS+=(--no-recursive)
@@ -244,7 +236,7 @@ got_repo() {
         [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     fi
     if [ -z "$SUBMODULE_MODE" ]; then
-        [ -n "$FLAT" ] && mv "$GIT_DIR" ".git"
+        [ -z "$PRESERVE" ] && mv "$GIT_DIR" ".git"
         got_dir "$GIT_WORK_TREE" "$1"
     else
         exit 0
@@ -256,8 +248,8 @@ QUIET=
 VERBOSE=
 FORCE_DIR=
 OUTPUT=
-FLAT=
-XPRESERVE=
+PRESERVE=
+TAG=
 TAG_FILE=
 PARALLEL=
 CONFIRM=
@@ -303,15 +295,27 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         -x)
-            XPRESERVE=YES
+            if [ "$PRESERVE" = G ]; then
+                echo "Error: Conflict: -x and -g|--preserve-git" >&2
+                exit 1
+            fi
+            PRESERVE=X
             shift
             ;;
-        --flat)
-            FLAT=YES
+        -g|--preserve-git)
+            if [ "$PRESERVE" = X ]; then
+                echo "Error: Conflict: -x and -g|--preserve-git" >&2
+                exit 1
+            fi
+            PRESERVE=G
+            shift
+            ;;
+        -t|--tag)
+            TAG=YES
             shift
             ;;
         --tag-file)
-            FLAT=YES
+            TAG=YES
             TAG_FILE="$2"
             shift
             shift
@@ -338,7 +342,7 @@ while [ $# -gt 0 ]; do
             elif [[ "$1" =~ ^--jobs= ]]; then
                 PARALLEL="${1#--jobs=}"
             elif [[ "$1" =~ ^--tag-file= ]]; then
-                FLAT=YES
+                TAG=YES
                 TAG_FILE="${1#--tag-file=}"
             elif [[ "$1" =~ ^--output= ]]; then
                 OUTPUT="${1#--output=}"
@@ -357,8 +361,8 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
-if [ -n "$XPRESERVE" ] && [ -n "$FLAT" ]; then
-    echo "Error: Conflict: -x and --flat" >&2
+if [ -n "$PRESERVE" ] && [ -n "$TAG" ]; then
+    echo "Error: Conflict: -x|-g|--preserve-git and -t|--tag|--tag-file" >&2
     exit 1
 fi
 
@@ -421,7 +425,7 @@ fi
 
 git_new || ([ -n "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
 
-if [ -n "$FLAT" ]; then
+if [ -n "$TAG" ]; then
     if [ -z "$TAG_FILE" ]; then
         TAG_FILE="VERSION"
     fi
@@ -440,6 +444,10 @@ if [ -n "$SUBMODULE_MODE" ]; then
         echo "Error: Conflict: --rm-rf cannot be used in submodule mode" >&2
         exit 1
     fi
+    if [ "$PRESERVE" = X ] && [ -z "$RAW" ]; then
+        [ -z "$QUIET" ] && echo "Warning: git-gets by default has -x enabled in submodule mode" >&2
+    fi
+    [ -z "$PRESERVE" ] && PRESERVE=X
     if [ -n "$GIT_WORK_TREE" ]; then
         GIT_WORK_TREE="$(realpath "$GIT_WORK_TREE")"
     else
@@ -455,8 +463,8 @@ if [ -n "$SUBMODULE_MODE" ]; then
 
     if [ -n "$VERBOSE" ]; then
         printf 'RAW=%q\n' "$RAW" >&2
-        printf 'FLAT=%q\n' "$FLAT" >&2
-        printf 'XPRESERVE=%q\n' "$XPRESERVE" >&2
+        printf 'PRESERVE=%q\n' "$PRESERVE" >&2
+        printf 'TAG=%q\n' "$TAG" >&2
         printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
         printf 'PARALLEL=%q\n' "$PARALLEL" >&2
         printf 'CONFIRM=%q\n' "$CONFIRM" >&2
@@ -546,8 +554,8 @@ if [ -n "$VERBOSE" ]; then
     printf 'RAW=%q\n' "$RAW" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
-    printf 'FLAT=%q\n' "$FLAT" >&2
-    printf 'XPRESERVE=%q\n' "$XPRESERVE" >&2
+    printf 'PRESERVE=%q\n' "$PRESERVE" >&2
+    printf 'TAG=%q\n' "$TAG" >&2
     printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
     printf 'PARALLEL=%q\n' "$PARALLEL" >&2
     printf 'CONFIRM=%q\n' "$CONFIRM" >&2
@@ -573,7 +581,7 @@ cd "$WORK_DIR"
 if git_new; then
     mkdir -p "$BASENAME"
     FLAG=YES
-    if [ -z "$XPRESERVE" ]; then
+    if [ ! "$PRESERVE" = X ]; then
         ARGS=(git clone --bare)
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)

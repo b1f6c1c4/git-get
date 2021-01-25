@@ -29,13 +29,7 @@ set -euo pipefail
 
 usage()
 {
-    cat - <<EOF
-git-get [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https]
-    <url> | <user>/<repo> [<branch>|<tag>|<sha1>] |
-    [https://github.com/]<user>/<repo>/commit|tree|blob/<branch>|<sha1>[/<path>]
-    [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
-    [-x | -g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
-EOF
+    exec man git-get
 }
 
 git_new() {
@@ -70,7 +64,6 @@ FORCE=
 FORCE_DIR=
 OUTPUT=
 PRESERVE=
-XPRESERVE=
 TAG=
 TAG_FILE=
 DIR=
@@ -119,12 +112,19 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         -x)
-            XPRESERVE=YES
-            PRESERVE=YES
+            if [ "$PRESERVE" = G ]; then
+                echo "Error: Conflict: -x and -g|--preserve-git" >&2
+                exit 1
+            fi
+            PRESERVE=X
             shift
             ;;
         -g|--preserve-git)
-            PRESERVE=YES
+            if [ "$PRESERVE" = X ]; then
+                echo "Error: Conflict: -x and -g|--preserve-git" >&2
+                exit 1
+            fi
+            PRESERVE=G
             shift
             ;;
         -t|--tag)
@@ -165,7 +165,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 if [ -n "$PRESERVE" ] && [ -n "$TAG" ]; then
-    echo "Error: Conflict: -x|-g|--preserve-git and --tag/--tag-file" >&2
+    echo "Error: Conflict: -x|-g|--preserve-git and -t|--tag|--tag-file" >&2
     exit 1
 fi
 if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
@@ -333,7 +333,7 @@ match_gh_url "https://github.com/" '' resolve_gh_url ||
     fi
 
 if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
-    echo "Error: Can't use an URL (of a folder or file) with -g|--preserve-git" >&2
+    echo "Error: Can't use an URL (of a folder or file) with -x|-g|--preserve-git" >&2
     exit 1
 fi
 
@@ -395,7 +395,6 @@ if [ -n "$VERBOSE" ]; then
     printf 'OUTPUT=%q\n' "$OUTPUT" >&2
     printf 'DEF_OUTPUT=%q\n' "$DEF_OUTPUT" >&2
     printf 'PRESERVE=%q\n' "$PRESERVE" >&2
-    printf 'XPRESERVE=%q\n' "$XPRESERVE" >&2
     printf 'TAG=%q\n' "$TAG" >&2
     printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
     printf 'GITHUB=%q\n' "$GITHUB" >&2
@@ -521,7 +520,7 @@ got_repo() {
     git config core.repositoryformatversion 0
 
     if [ -z "$DIR" ]; then
-        if [ -n "$XPRESERVE" ]; then
+        if [ "$PRESERVE" = X ]; then
             git for-each-ref --format='delete %(refname)' >ref-del
             git config remote.origin.tagOpt --tags
             git config --unset remote.origin.tagOpt
@@ -656,7 +655,7 @@ got_repo() {
 if git_new; then
     mkdir -p "$BASENAME"
     FLAG=YES
-    if [ -z "$XPRESERVE" ]; then
+    if [ ! "$PRESERVE" = X ]; then
         ARGS=(git clone --bare)
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)

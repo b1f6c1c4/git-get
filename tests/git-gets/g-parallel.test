@@ -1,4 +1,4 @@
-R="$(git-gets b1f6c1c4/git-get example-repo2 -P)"
+R="$(git-gets b1f6c1c4/git-get example-repo2 -gP)"
 
 [ -z "$R" ]
 [ "$(git -C git-get rev-parse HEAD)" = "2dd50b6425c7d79f4695aa69d05467e1a00fc20f" ]

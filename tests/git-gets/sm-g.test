@@ -1,7 +1,7 @@
 git clone --depth=2 --no-tags --branch example-repo2 https://github.com/b1f6c1c4/git-get.git repo
 git -C repo update-ref refs/heads/whatever 1beea7d7bf112446f5a3beda9dfa8b51727a5ae1
 
-R="$(cd repo && git-gets --no-recursive)"
+R="$(cd repo && git-gets -g)"
 
 [ -z "$R" ]
 [ "$(git -C repo config --get remote.origin.tagOpt)" = "--no-tags" ]
@@ -19,8 +19,12 @@ R="$(cd repo && git-gets --no-recursive)"
 [ -z "$(git -C repo/xsub config --get remote.origin.tagOpt)" ]
 [ "$(git -C repo/xsub config --get remote.origin.mirror)" = "true" ]
 [ "$(git -C repo/xsub config --get remote.origin.fetch)" = "+refs/*:refs/*" ]
-! git -C repo/sub symbolic-ref HEAD
+! git -C repo/xsub symbolic-ref HEAD
 
-rmdir repo/xsub/sub
+[ "$(git -C repo/xsub/sub rev-parse HEAD)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
+[ -z "$(git -C repo/xsub/sub config --get remote.origin.tagOpt)" ]
+[ "$(git -C repo/xsub/sub config --get remote.origin.mirror)" = "true" ]
+[ "$(git -C repo/xsub/sub config --get remote.origin.fetch)" = "+refs/*:refs/*" ]
+! git -C repo/xsub/sub symbolic-ref HEAD
 
 rm -rf repo

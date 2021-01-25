@@ -1,4 +1,4 @@
-R="$(git-gets b1f6c1c4/git-get example-repo2 --flat -c <<<nyn)"
+R="$(git-gets b1f6c1c4/git-get example-repo2 -c <<<nyn)"
 
 [ -z "$R" ]
 [   -L git-get/link ]

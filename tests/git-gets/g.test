@@ -1,4 +1,4 @@
-R="$(git-gets b1f6c1c4/git-get example-repo2 -g --no-recursive)"
+R="$(git-gets b1f6c1c4/git-get example-repo2 -g)"
 
 [ -z "$R" ]
 [ "$(git -C git-get rev-parse HEAD)" = "2dd50b6425c7d79f4695aa69d05467e1a00fc20f" ]
@@ -19,6 +19,10 @@ R="$(git-gets b1f6c1c4/git-get example-repo2 -g --no-recursive)"
 [ "$(git -C git-get/xsub config --get remote.origin.fetch)" = "+refs/*:refs/*" ]
 ! git -C git-get/xsub symbolic-ref HEAD
 
-rmdir git-get/xsub/sub
+[ "$(git -C git-get/xsub/sub rev-parse HEAD)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
+[ -z "$(git -C git-get/xsub/sub config --get remote.origin.tagOpt)" ]
+[ "$(git -C git-get/xsub/sub config --get remote.origin.mirror)" = "true" ]
+[ "$(git -C git-get/xsub/sub config --get remote.origin.fetch)" = "+refs/*:refs/*" ]
+! git -C git-get/xsub/sub symbolic-ref HEAD
 
 rm -rf git-get
