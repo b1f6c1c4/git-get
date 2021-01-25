@@ -38,6 +38,19 @@ Show intermediate steps\&.
 Suppress \fBgit-clone\fR(1) progress report\&.
 .RE
 .PP
+-s, --ssh, -H, --https
+.RS 4
+Switch between SSH protocol and HTTPS protocol when accessing GitHub.
+By default, whatever you've written in \fB<url>\fR will be used;
+if you use the abbreviation \fB<user>/<repo>\fR, ssh will be used.
+However, SSH may fail if you are on a machine
+without any ssh keypair that can be used to connect to GitHub.
+You can manually change such behaviors by \fB-H\fR.
+Alternatively, setting environment variable \fBGH_USE_HTTPS\fR
+or \fBGH_USE_SSH\fR to any non-empty value has similar effects.
+Note that any access to non-GitHub remote repository is NOT affected.
+.RE
+.PP
 --no-recursive
 .RS 4
 Only the top-level submodules will be downloaded, don't recurse down\&.

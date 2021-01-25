@@ -9,8 +9,12 @@
     ```bash
     # Method 1: Paste the original URL into the terminal:
     git get https://github.com/b1f6c1c4/git-get/blob/master/README.md
-    # Method 2: Type a few words in the terminal:
+    # Method 2: Of course, a full URL is acceptable:
+    git get git@github.com:b1f6c1c4/git-get -- README.md
+    # Method 3a: Type a few words in the terminal:
     git get b1f6c1c4/git-get -- README.md
+    # Method 3b: If the above doesn't work because of SSH, use HTTPS:
+    git get -H b1f6c1c4/git-get -- README.md
     ```
 - Download a folder:
     ```bash
@@ -170,18 +174,18 @@ interactively choose which dependency you want to install.
 The CLI is pretty self-explanatory:
 
 ```bash
-git-get [-v|--verbose|-q|--quiet]
+git-get [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https]
     <url> | <user>/<repo> [<branch>|<sha1>] |
     [https://github.com/]<user>/<repo>/commit|tree|blob/<branch>|<sha1>[/<path>]
     [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
     [-x | -g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
 
-git gets [-v|--verbose|-q|--quiet] [--no-recursive]
+git gets [-v|--verbose|-q|--quiet] [--no-recursive] [-s|--ssh | -H|--https]
     <url> | <user>/<repo> [<branch>|<sha1>]
     [-o <target> | --output=<target>] [-F|--rm-rf]
     [-x | --flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
 
-git gets [-v|--verbose|-q|--quiet] [--no-recursive]
+git gets [-v|--verbose|-q|--quiet] [--no-recursive] [-s|--ssh | -H|--https]
     [-x] [-P|--parallel] [-c|--confirm] [--no-init]
 ```
 
@@ -193,6 +197,17 @@ The latter one means that you need to manually initialize *top-level* submodules
 Both switches apply solely to top-level submodules.
 If you don't want to download any submodule, simply use `git get` instead of `git gets`.
 Finer control is feasible using `--confirm`.
+
+* `-s|--ssh` and `-H|--https`:
+Switch between SSH protocol and HTTPS protocol when accessing GitHub.
+By default, whatever you've written in `<url>` will be used;
+if you use the abbreviation `<user>/<repo>`, ssh will be used.
+However, SSH may fail if you are on a machine
+without any ssh keypair that can be used to connect to GitHub.
+You can manually change such behaviors by `-H`.
+Alternatively, setting environment variable `GH_USE_HTTPS`
+or `GH_USE_SSH` to any non-empty value has similar effects.
+Note that any access to non-GitHub remote repository is NOT affected.
 
 * `-t|--tag` and `--tag-file`:
 Tag file is a file, usually named `VERSION`, that is put
