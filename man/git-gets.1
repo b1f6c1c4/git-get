@@ -73,10 +73,12 @@ Only valid in form \fB(1)\fR\&.
 .PP
 -x
 .RS 4
-Make the downloaded repository look as similar as one
+Preserve and enhance the \fB.git\fR directory to
+make the downloaded repository look as similar as one
 created by an ordinary \fBgit clone\fR at the cost of a little bit
 more network bandwidth and disk space.
-This option implies that \fB.git\fR is NOT removed (see below), i.e. \fB--flat\fR is NOT used.
+This option is only usable in form \fB(1)\fR\&.
+You cannot use it together with \fB-g\fR nor \fB-t\fR.
 Specifically, using \fB-x\fR has the following effects:
 .IP \[bu] 2
 All commits will be downloaded: you can still view the full history
@@ -95,19 +97,26 @@ To take a deeper look on this, please read the following reference:
 .UE .
 .RE
 .PP
---flat
+-g, --preserve-git
 .RS 4
-Remove the whole git repository \fB.git\fR to save disk space\&.
-Only valid in form \fB(1)\fR\&.
+Preserve the \fB.git\fR directory, but don't do anything superfluous
+that may waste network bandwidth.
+Compared to \fB-x\fR, using this option will not incur any additional
+cost compared to that with neither of \fB-x\fR nor \fB-g\fR.
+However, the actual respository may not be as exploitable as before.
+See the discussion of \fB-x\fR to see the difference.
+You cannot use it together with \fB-x\fR nor \fB-t\fR.
 .RE
 .PP
---tag-file=VERSION
+-t, --tag-file=VERSION
 .RS 4
+These options are only valid in form \fB(1)\fR.
+Enable the generation of tag file by specifying \fB-t\fR\&.
 Rename and relocate the tag file by specifying \fB--tag-file\fR (which implies \fB-t\fR\&.)
 Tag file is a file, usually named VERSION, that is put along side with your downloaded file or inside your downloaded directory\&.
 It records the SHA-1 of the commit you downloaded it from\&.
 Without this file and without \fB.git\fR repo, others will lose track of where the code came from\&.
-Only valid in form \fB(1)\fR and when \fB--flat\fR is specified.
+You cannot use it together with \fB-g\fR.
 .RE
 .PP
 -P, --parallel
@@ -144,9 +153,6 @@ $ git gets -P ...
 .sp
 If you want to make changes and push back:
 $ git gets -x ...
-.sp
-If you want to save disk space:
-$ git gets --flat ...
 .fi
 .if n \{\
 .RE
@@ -160,9 +166,9 @@ You already have a repo, and you want its submodules:
 .RS 4
 .\}
 .nf
-$ git gets -x           # Just give me all
-$ git gets -xc          # Let me choose
-$ git gets -x --no-init # Only those with 'git submodule init ...'
+$ git gets              # Just give me all
+$ git gets -c           # Let me choose
+$ git gets --no-init    # Only those with 'git submodule init ...'
 .fi
 .if n \{\
 .RE

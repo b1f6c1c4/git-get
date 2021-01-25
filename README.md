@@ -57,14 +57,12 @@
     git gets -P ...
     # If you want to make changes and push back:
     git gets -x ...
-    # If you want to save disk space:
-    git gets --flat ...   # Automatic 'rm -rf .git', the oposite of -x
     ```
 - You already have a repo, and you want its submodules:
     ```bash
-    git gets -x           # Just give me all
-    git gets -xc          # Let me choose
-    git gets -x --no-init # Only those with 'git submodule init ...'
+    git gets              # Just give me all
+    git gets -c           # Let me choose
+    git gets --no-init    # Only those with 'git submodule init ...'
     ```
 
 ## Performance
@@ -89,12 +87,6 @@ git get <url> <commit> -- <file>
 #     rm -rf repo/.git
 
 git gets <url> <commit> -P
-# is 1x~10000000x faster than:
-#     git clone --mirror <url> repo
-#     git -C repo switch --detach <commit>
-#     git -C repo submodule update --init --recursive
-
-git gets <url> <commit> -P --flat
 # is 1x~10000000x faster than:
 #     git clone --mirror <url> repo
 #     git -C repo switch --detach <commit>
@@ -169,27 +161,41 @@ If you want to download some submodules but not the others,
 just add `-c|--confirm` to `git-gets` and you can
 interactively choose which dependency you want to install.
 
-## Usage
+## Basic Usage
 
 The CLI is pretty self-explanatory:
 
 ```bash
-git-get [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https]
-    <url> | <user>/<repo> [<branch>|<sha1>] |
-    [https://github.com/]<user>/<repo>/commit|tree|blob/<branch>|<sha1>[/<path>]
-    [-o <target> | --output=<target>] [-f|--force] [-F|--rm-rf]
-    [-x | -g|--preserve-git | [-t [--tag-file=VERSION]] [-- <path>]]
+# There are multiple ways to specify what you want to download:
+<specifier> :=
+    <full-url-to-git-location>
+    | <user>/<repo> [<branch>|<sha1>]
+    | https://github.com/<user>/<repo>/
+    | https://github.com/<user>/<repo>/commit/<commitish>
+    | https://github.com/<user>/<repo>/tree/<commitish>[/<path>]
+    | https://github.com/<user>/<repo>/blob/<commitish>[/<path>]
 
-git gets [-v|--verbose|-q|--quiet] [--no-recursive] [-s|--ssh | -H|--https]
-    <url> | <user>/<repo> [<branch>|<sha1>]
-    [-o <target> | --output=<target>] [-F|--rm-rf]
-    [-x | --flat [--tag-file=VERSION]] [-P|--parallel] [-c|--confirm]
+# Download a single repo (or part of):
+git-get [-v|--verbose|-q|--quiet] [-H|--https]
+    <specifier> [-o <target>] [-f|--force] [-F|--rm-rf]
+    (-x | [-t|--tag] [-- <path>])
 
-git gets [-v|--verbose|-q|--quiet] [--no-recursive] [-s|--ssh | -H|--https]
-    [-x] [-P|--parallel] [-c|--confirm] [--no-init]
+# Download a repo and its submodules:
+git gets [-v|--verbose|-q|--quiet] [-H|--https] [--no-recursive]
+    [-P|--parallel] [-c|--confirm]
+    <specifier> [-o <target>] [-F|--rm-rf]
+    (-x | [-t|--tag])
+
+# Download submodules of an existing repo:
+git gets [-v|--verbose|-q|--quiet] [-H|--https] [--no-recursive]
+    [-P|--parallel] [-c|--confirm] [--no-init]
 ```
 
 Some comments:
+
+* `-H|--https`:
+Use HTTPS instead of SSH when accesssing github.com and gist.github.com
+in the case when you don't have a ready-to-use SSH set-up.
 
 * `--no-recursive` and `--no-init`:
 The former one means that only *top-level* submodules are downloaded.
@@ -198,57 +204,26 @@ Both switches apply solely to top-level submodules.
 If you don't want to download any submodule, simply use `git get` instead of `git gets`.
 Finer control is feasible using `--confirm`.
 
-* `-s|--ssh` and `-H|--https`:
-Switch between SSH protocol and HTTPS protocol when accessing GitHub.
-By default, ssh will be used to access github.com (including gist.github.com).
-However, SSH may fail if you are on a machine
-without any ssh keypair that can be used to connect to GitHub.
-You can manually change such behaviors by `-H`.
-Alternatively, setting environment variable `GH_USE_HTTPS`
-or `GH_USE_SSH` to any non-empty value has similar effects.
-Note that any access to non-GitHub remote repository is NOT affected.
-
-* `-t|--tag` and `--tag-file`:
-Tag file is a file, usually named `VERSION`, that is put
-along side with your downloaded file or inside your downloaded directory.
-It records the SHA-1 of the commit you downloaded it from.
-Without this file and without `.git` repo,
-others will lose track of where the code came from.
-
-* `-o|--output=<target>`, `-f|--force` and `-F|--rm-rf`:
-If you downloaded a file/directory and `<target>` is an existing file,
-you may override the file with `-f|--force`.
-If you downloaded a file and `<target>` is an existing directory,
-the file is put into the directory.
-If you downloaded a directory and `<target>` is an existing directory,
-you may override the directory with `-F|--rm-rf`.
-In no case will a directory be put into an existing directory.
+* `-f|--force` and `-F|--rm-rf`:
+Override existing file with `-f|--force`.
+Override existing directory with `-F|--rm-rf`.
 
 * `-x`:
-Make the downloaded repository look as similar as one
-created by an ordinary `git clone` at the cost of a little bit
-more network bandwidth and disk space.
-This option implies that `.git` is NOT removed (see below), i.e.
-`-g` is implied for `git-get` and `--flat` is disabled for `git-gets`.
-Specifically, using `-x` has the following effects:
+`-x` will keep the `.git` so you can make changes.
+The repository is NOT 100% the same as a regular `git-clone`'d one.
+To take a deeper look at the difference, please read the following reference:
+[git partial clone](https://git-scm.com/docs/partial-clone).
+You cannot use it together with `-t|--tag`.
 
-    - All commits will be downloaded: you can still view the full history
-    when doing a normal `git log`.
+* `-t|--tag`:
+Instead of keeping a respository, generate a single file called `VERSION`
+that contains the SHA-1 of the commit you accessed.
+Put it along side with your downloaded file or inside your downloaded directory
+so you will know from where the file/dir is obtained.
+You cannot use it together with `-x`.
 
-    - All trees and blobs will be lazy loaded: they won't be downloaded
-    until you explicitly checkout / switch / show it.
-    Thus, running `git log -p` or `git log --stat` WITHOUT ANY RESTRICTION
-    will trigger downloading the WHOLE REPOSITORY, an absolute disaster.
-
-    - `git fetch`, `git pull`, and `git push` will behave (mostly) normal,
-    instead of mirroring by default.
-
-    To take a deeper look on this, please read the following reference:
-    [git partial clone](https://git-scm.com/docs/partial-clone).
-
-* `-g|--preserve-git` and `--flat`:
-In `git-get`, `.git` is removed by default. You can override this with `-g|--preserve-git`.
-In `git-gets`, `.git` is kept by default. You can override this with `--flat`.
+Not all options are shown here.
+For additional ones, refer to `man git-get` and `man git-gets`.
 
 ## Install and Upgrade
 
