@@ -9,5 +9,6 @@ R="$(git-get b1f6c1c4/git-get example-repo0 -o d --preserve-git)"
 [ "$(git -C d config --get remote.origin.tagOpt)" = "--no-tags" ]
 [ -z "$(git -C d config --get remote.origin.mirror)" ]
 [ -z "$(git -C d config --get remote.origin.fetch)" ]
+! git -C d symbolic-ref HEAD
 
 rm -rf d

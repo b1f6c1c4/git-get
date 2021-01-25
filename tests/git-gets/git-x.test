@@ -7,6 +7,7 @@ R="$(cd repo && git-gets -x)"
 [ "$(git -C repo config --get remote.origin.tagOpt)" = "--no-tags" ]
 [ "$(git -C repo rev-parse HEAD~~ -- || echo good)" = "good" ]
 [ "$(git -C repo rev-parse refs/heads/whatever)" = "1beea7d7bf112446f5a3beda9dfa8b51727a5ae1" ]
+[ "$(git -C repo symbolic-ref HEAD)" = "refs/heads/example-repo2" ]
 
 [ "$(git -C repo/sub rev-parse HEAD)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
 [ -z "$(git -C repo/sub config --get remote.origin.tagOpt)" ]
@@ -15,6 +16,7 @@ R="$(cd repo && git-gets -x)"
 [ "$(git -C repo/sub rev-parse refs/heads/example-repo0 -- || echo good)" = "good" ]
 [ "$(git -C repo/sub rev-parse refs/remotes/origin/example-repo0)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
 [ "$(git -C repo/sub rev-parse refs/tags/example-tag)" = "f774e3273eae40457109d04b0b5c5504047fac9d" ]
+! git -C repo/sub symbolic-ref HEAD
 
 [ "$(git -C repo/xsub rev-parse HEAD)" = "2c0d59d84b729758f978c827a47980946f9a0e99" ]
 [ -z "$(git -C repo/xsub config --get remote.origin.tagOpt)" ]
@@ -24,6 +26,7 @@ R="$(cd repo && git-gets -x)"
 [ "$(git -C repo/xsub rev-parse refs/heads/example-repo0 -- || echo good)" = "good" ]
 [ "$(git -C repo/xsub rev-parse refs/remotes/origin/example-repo0)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
 [ "$(git -C repo/xsub rev-parse refs/tags/example-tag)" = "f774e3273eae40457109d04b0b5c5504047fac9d" ]
+! git -C repo/xsub symbolic-ref HEAD
 
 [ "$(git -C repo/xsub/sub rev-parse HEAD)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
 [ -z "$(git -C repo/xsub/sub config --get remote.origin.tagOpt)" ]
@@ -32,5 +35,6 @@ R="$(cd repo && git-gets -x)"
 [ "$(git -C repo/xsub/sub rev-parse refs/heads/example-repo0 -- || echo good)" = "good" ]
 [ "$(git -C repo/xsub/sub rev-parse refs/remotes/origin/example-repo0)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
 [ "$(git -C repo/xsub/sub rev-parse refs/tags/example-tag)" = "f774e3273eae40457109d04b0b5c5504047fac9d" ]
+! git -C repo/xsub/sub symbolic-ref HEAD
 
 rm -rf repo

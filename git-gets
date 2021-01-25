@@ -117,8 +117,19 @@ got_repo() {
         git config --unset remote.origin.mirror
         git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
         git fetch origin
+        if git show-ref --verify "refs/heads/$BRANCH" >/dev/null 2>/dev/null; then
+            [ -n "$VERBOSE" ] && echo "Set branch: refs/heads/$BRANCH" >&2
+            SET_BR=YES
+        else
+            [ -n "$VERBOSE" ] && echo "Not a valid branch: refs/heads/$BRANCH" >&2
+            SET_BR=
+        fi
         git update-ref --stdin <ref-del
         git fetch origin
+        if [ -n "$SET_BR" ]; then
+            git branch -f "$BRANCH" "refs/remotes/origin/$BRANCH" >&2
+            git symbolic-ref HEAD "refs/heads/$BRANCH"
+        fi
     fi
 
     ARGS=(git reset --hard)
@@ -504,6 +515,23 @@ fi
 if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
+
+if [ "$BRANCH" = "HEAD" ]; then
+    [ -n "$VERBOSE" ] && echo "Resolving HEAD..." >&2
+    BRANCH="$(git ls-remote --symref "$REPO" HEAD | { grep '^ref:' || true; } | cut -d $'\t' -f 1)"
+    if [ -z "$BRANCH" ]; then
+        [ -z "$QUIET" ] && echo "Weird repo HEAD non-symbolic, still proceeding" >&2
+        BRANCH=HEAD
+    else
+        BRANCH="${BRANCH#ref: }"
+        if [ "${BRANCH#refs/heads/}" = "${BRANCH}" ]; then
+            [ -z "$QUIET" ] && echo "Weird repo HEAD symbolic, still proceeding" >&2
+        else
+            BRANCH="${BRANCH#refs/heads/}"
+        fi
+    fi
+fi
+
 if [ -n "$VERBOSE" ]; then
     printf 'RAW=%q\n' "$RAW" >&2
     printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
