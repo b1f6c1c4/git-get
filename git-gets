@@ -565,33 +565,39 @@ cd "$WORK_DIR"
 # 0. git 2.20+ -> shallow + [filter] -> filter
 if git_new; then
     mkdir -p "$BASENAME"
-    ARGS=(git clone --bare)
-    [ -n "$QUIET" ] && ARGS+=(-q)
-    [ -z "$QUIET" ] && ARGS+=(--progress)
-    [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
-    ARGS+=(--depth 1 --no-tags)
-    ARGS+=(--filter blob:none)
-    ARGS+=("$REPO" "$BASENAME/.git")
-    [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-    set +e
-    if [ -z "$QUIET" ]; then
-        "${ARGS[@]}" 2>&1 | tee clone.log >&2
-        R="$?"
-    else
-        "${ARGS[@]}" 1>clone.log 2>&1
-        R="$?"
-    fi
-    if [ "$R" -eq 0 ]; then
+    FLAG=YES
+    if [ -z "$XPRESERVE" ]; then
+        ARGS=(git clone --bare)
+        [ -n "$QUIET" ] && ARGS+=(-q)
+        [ -z "$QUIET" ] && ARGS+=(--progress)
+        [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
+        ARGS+=(--depth 1 --no-tags)
+        ARGS+=(--filter blob:none)
+        ARGS+=("$REPO" "$BASENAME/.git")
+        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        set +e
+        if [ -z "$QUIET" ]; then
+            "${ARGS[@]}" 2>&1 | tee clone.log >&2
+            R="$?"
+        else
+            "${ARGS[@]}" 1>clone.log 2>&1
+            R="$?"
+        fi
+        if [ "$R" -eq 0 ]; then
+            set -e
+            GIT_WORK_TREE="$(realpath "$BASENAME")"
+            GIT_DIR="$(realpath "$BASENAME/.git")"
+            export GIT_WORK_TREE
+            export GIT_DIR
+            git config --bool core.bare false
+            got_repo "$(git rev-parse HEAD)"
+        fi
         set -e
-        GIT_WORK_TREE="$(realpath "$BASENAME")"
-        GIT_DIR="$(realpath "$BASENAME/.git")"
-        export GIT_WORK_TREE
-        export GIT_DIR
-        git config --bool core.bare false
-        got_repo "$(git rev-parse HEAD)"
+        if ! grep -q 'warning: Could not find remote branch' clone.log; then
+            FLAG=
+        fi
     fi
-    set -e
-    if grep -q 'warning: Could not find remote branch' clone.log; then
+    if [ -n "$FLAG" ]; then
         ARGS=(git clone --mirror --filter tree:0)
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)

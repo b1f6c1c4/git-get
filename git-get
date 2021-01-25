@@ -584,21 +584,27 @@ got_repo() {
 # 0. git 2.20+ -> shallow + [filter] -> filter
 if git_new; then
     mkdir -p "$BASENAME"
-    ARGS=(git clone --bare)
-    [ -n "$QUIET" ] && ARGS+=(-q)
-    [ -z "$QUIET" ] && ARGS+=(--progress)
-    [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
-    ARGS+=(--depth 1 --no-tags)
-    [ -n "$DIR" ] && ARGS+=(--filter blob:none)
-    ARGS+=("$REPO" "$BASENAME/.git")
-    [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-    set +e
-    if "${ARGS[@]}" 2>&1 | tee clone.log >&2; then
+    FLAG=YES
+    if [ -z "$XPRESERVE" ]; then
+        ARGS=(git clone --bare)
+        [ -n "$QUIET" ] && ARGS+=(-q)
+        [ -z "$QUIET" ] && ARGS+=(--progress)
+        [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
+        ARGS+=(--depth 1 --no-tags)
+        [ -n "$DIR" ] && ARGS+=(--filter blob:none)
+        ARGS+=("$REPO" "$BASENAME/.git")
+        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        set +e
+        if "${ARGS[@]}" 2>&1 | tee clone.log >&2; then
+            set -e
+            got_repo "$BASENAME" "$(git --git-dir="$BASENAME/.git" rev-parse HEAD)"
+        fi
         set -e
-        got_repo "$BASENAME" "$(git --git-dir="$BASENAME/.git" rev-parse HEAD)"
+        if ! grep -q 'warning: Could not find remote branch' clone.log; then
+            FLAG=
+        fi
     fi
-    set -e
-    if grep -q 'warning: Could not find remote branch' clone.log; then
+    if [ -n "$FLAG" ]; then
         ARGS=(git clone --mirror --filter tree:0)
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)
