@@ -109,12 +109,16 @@ got_dir() {
 got_repo() {
     set -e
     git config core.repositoryformatversion 0
-    if [ -n "$XPRESERVE" ]; then
+    if [ -n "$XPRESERVE" ] && [ -z "$SUBMODULE_MODE" ]; then
+        git for-each-ref --format='delete %(refname)' >ref-del
         git config remote.origin.tagOpt --tags
         git config --unset remote.origin.tagOpt
         git config remote.origin.mirror false
         git config --unset remote.origin.mirror
         git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+        git fetch origin
+        git update-ref --stdin <ref-del
+        git fetch origin
     fi
 
     ARGS=(git reset --hard)

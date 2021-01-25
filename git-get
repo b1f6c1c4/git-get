@@ -484,11 +484,15 @@ got_repo() {
         [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
         if [ -n "$XPRESERVE" ]; then
+            git --git-dir="$1/.git" for-each-ref --format='delete %(refname)' >ref-del
             git --git-dir="$1/.git" config remote.origin.tagOpt --tags
             git --git-dir="$1/.git" config --unset remote.origin.tagOpt
             git --git-dir="$1/.git" config remote.origin.mirror false
             git --git-dir="$1/.git" config --unset remote.origin.mirror
             git --git-dir="$1/.git" config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+            git --git-dir="$1/.git" fetch origin
+            git --git-dir="$1/.git" update-ref --stdin <ref-del
+            git --git-dir="$1/.git" fetch origin
         fi
         [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
         got_dir "$1" "$2" && exit 0

@@ -1,9 +1,14 @@
-git clone --depth=1 --branch example-repo2 https://github.com/b1f6c1c4/git-get.git repo
+git clone --depth=2 --no-tags --branch example-repo2 https://github.com/b1f6c1c4/git-get.git repo
+git -C repo update-ref refs/heads/whatever 1beea7d7bf112446f5a3beda9dfa8b51727a5ae1
 git -C repo submodule init -- xsub
 
 R="$(cd repo && git-gets --no-init)"
 
 [ -z "$R" ]
+[ "$(git -C repo config --get remote.origin.tagOpt)" = "--no-tags" ]
+[ "$(git -C repo rev-parse HEAD~~ -- || echo good)" = "good" ]
+[ "$(git -C repo rev-parse refs/heads/whatever)" = "1beea7d7bf112446f5a3beda9dfa8b51727a5ae1" ]
+
 rmdir repo/sub
 
 [ "$(git -C repo/xsub rev-parse HEAD)" = "2c0d59d84b729758f978c827a47980946f9a0e99" ]
