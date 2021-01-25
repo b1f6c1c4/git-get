@@ -474,26 +474,27 @@ got_dir() {
 
 got_repo() {
     set -e
-    git --git-dir="$1/.git" config --bool core.bare false
-    git --git-dir="$1/.git" config core.repositoryformatversion 0
+    git config --bool core.bare false
+    git config core.repositoryformatversion 0
 
     if [ -z "$DIR" ]; then
+        if [ -n "$XPRESERVE" ]; then
+            git for-each-ref --format='delete %(refname)' >ref-del
+            git config remote.origin.tagOpt --tags
+            git config --unset remote.origin.tagOpt
+            git config remote.origin.mirror false
+            git config --unset remote.origin.mirror
+            git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+            git fetch origin
+            git update-ref --stdin <ref-del
+            git fetch origin
+        fi
+        unset GIT_DIR
         ARGS=(git reset --hard)
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-        if [ -n "$XPRESERVE" ]; then
-            git --git-dir="$1/.git" for-each-ref --format='delete %(refname)' >ref-del
-            git --git-dir="$1/.git" config remote.origin.tagOpt --tags
-            git --git-dir="$1/.git" config --unset remote.origin.tagOpt
-            git --git-dir="$1/.git" config remote.origin.mirror false
-            git --git-dir="$1/.git" config --unset remote.origin.mirror
-            git --git-dir="$1/.git" config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-            git --git-dir="$1/.git" fetch origin
-            git --git-dir="$1/.git" update-ref --stdin <ref-del
-            git --git-dir="$1/.git" fetch origin
-        fi
         [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
         got_dir "$1" "$2" && exit 0
     else
@@ -505,9 +506,11 @@ got_repo() {
             if [ "$TP" = "$DIR" ] || [ ! "${DIR#${TP}/}" = "$DIR" ]; then
                 P="$TP"
             fi
-        done 3< <(git --git-dir="$1/.git" ls-tree HEAD -r | grep '^160000 commit ')
+        done 3< <(git ls-tree HEAD -r | grep '^160000 commit ')
+        unset GIT_DIR
         if [ -n "$P" ]; then
             [ -n "$VERBOSE" ] && printf 'Checking %q -> %s (%q) \n' "$DIR" "commit" "$P" >&2
+
             # To support legacy git, use git checkout here
             # ARGS=(git restore --source=HEAD --staged --worktree)
             ARGS=(git checkout HEAD)
@@ -601,7 +604,8 @@ if git_new; then
         set +e
         if "${ARGS[@]}" 2>&1 | tee clone.log >&2; then
             set -e
-            got_repo "$BASENAME" "$(git --git-dir="$BASENAME/.git" rev-parse HEAD)"
+            export GIT_DIR="$BASENAME/.git"
+            got_repo "$BASENAME" "$(git rev-parse HEAD)"
         fi
         set -e
         if ! grep -q 'warning: Could not find remote branch' clone.log; then
@@ -616,13 +620,14 @@ if git_new; then
         [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
         set +e
         if "${ARGS[@]}"; then
-            SHA1="$(git --git-dir="$BASENAME/.git" rev-parse "$BRANCH")"
+            export GIT_DIR="$BASENAME/.git"
+            SHA1="$(git rev-parse "$BRANCH")"
             if [ -n "$SHA1" ]; then
                 [ -z "$QUIET" ] && printf 'Got SHA1: %q\n' "$SHA1" >&2
                 set -e
-                NSHA1="$(git --git-dir="$BASENAME/.git" rev-parse "$SHA1^{commit}")"
+                NSHA1="$(git rev-parse "$SHA1^{commit}")"
                 [ ! "$SHA1" = "$NSHA1" ] && printf 'Got actual SHA1: %q\n' "$NSHA1" >&2
-                git --git-dir="$BASENAME/.git" update-ref --no-deref HEAD "$NSHA1"
+                git update-ref --no-deref HEAD "$NSHA1"
                 got_repo "$BASENAME" "$NSHA1"
             fi
         fi
