@@ -446,7 +446,7 @@ if [ -n "$SUBMODULE_MODE" ]; then
     fi
 
     cd "$GIT_WORK_TREE"
-    if [ -n "$(git status --porcelain --untracked-files=no --ignore-submodules=all --ignored=no)" ]; then
+    if [ -n "$(git status --porcelain --untracked-files=no --ignore-submodules=dirty --ignored=no)" ]; then
         echo "Error: Your stage / worktree is NOT clean. Too dangerous to proceed." >&2
         exit 1
     fi
