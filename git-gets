@@ -337,7 +337,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --flat)
-            echo "Error: --flat is no longer supported. Please see man git-gets for more information." >&1
+            echo "Error: --flat is no longer supported. Please see man git-gets for more information." >&2
             exit 1
             ;;
         *)
@@ -359,7 +359,7 @@ while [ $# -gt 0 ]; do
                 shift
                 set -- '' "${T:0:2}" "-${T:2}" "$@"
             elif [[ "$1" =~ ^- ]]; then
-                echo "Error: Unrecognized argument $1" >&1
+                echo "Error: Unrecognized argument $1" >&2
                 exit 1
             else
                 POSITIONAL+=("$1")
