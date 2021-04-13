@@ -1,7 +1,6 @@
 # `git-get`: Blazingly fast, incredibly handy `git clone`
 
-[![Linux and macOS Test Status](https://travis-ci.com/b1f6c1c4/git-get.svg?branch=master)](https://travis-ci.com/b1f6c1c4/git-get)
-[![Windows Test Status](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)](https://ci.appveyor.com/project/b1f6c1c4/git-get/branch/master)
+[![Test Status](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)](https://ci.appveyor.com/project/b1f6c1c4/git-get/branch/master)
 
 ## TL;DR
 

@@ -7,17 +7,37 @@ branches:
 skip_commits:
   message: /\[ci skip\]|\[skip ci\]/
 
-image: Visual Studio 2019
+image:
+  - Visual Studio 2019
+  - Ubuntu2004
+  - macos
 
 environment:
   MAKEFLAGS: -j8
 
-install:
-  - choco install make
-  - make clean
+for:
+-
+  matrix:
+    only:
+      - image: Visual Studio 2019
+
+  install:
+    - choco install make
+
+-
+  matrix:
+    only:
+      - image: macos
+
+  install:
+    - brew install grep
+    - export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
 
 before_build:
+  - make --version
   - git version
+  - grep --version
+  - make clean
 
 build_script:
   - make test
