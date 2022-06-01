@@ -38,7 +38,7 @@ pkgdesc="Blazingly fast, incredibly handy git clone alternative"
 arch=('any')
 url="https://github.com/b1f6c1c4/git-get"
 license=('MIT')
-depends=('git' 'bash' 'grep' 'sed' 'awk')
+depends=('git' 'bash' 'grep' 'sed')
 source=("\$pkgname-\$pkgver.tar.xz::\$url/releases/download/\$pkgver/\$pkgname.tar.xz")
 sha256sums=('$(sha256sum build/git-get.tar.xz | awk '{ print $1; }')')
 

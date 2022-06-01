@@ -271,12 +271,12 @@ In fact, git is so smart that, as long as `git-get` is in `PATH`, `git <xyz>` wi
 
 * `bash`, can be `GNU bash` on Linux / MacOS, or `Git bash` on Windows
 * `git` **2.20+**, the newer the better
-* `awk`, `sed`, and `grep`
+* `sed`, and `grep`
     * On Linux: You should already have them installed.
     * On MacOS: You should already have them installed.
     * On Windows:
         ```bash
-        choco install grep awk sed
+        choco install grep sed
         ```
 
 ## License
