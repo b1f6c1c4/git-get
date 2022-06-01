@@ -29,10 +29,6 @@ for:
     only:
       - image: macos
 
-  install:
-    - brew install grep
-    - export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
-
 before_build:
   - make --version
   - git version

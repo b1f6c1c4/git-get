@@ -200,24 +200,26 @@ fi
 resolve_gh_url() {
     GITHUB=REPO
     AMBI=
-    if grep -qP '^[^/]+/[^/]+$' <<<"$1"; then
+    if grep -qE '^[^/]+/[^/]+$' <<<"$1"; then
         GH_REPO="${1%.git}"
-    elif grep -qP '^[^/]+/[^/]+/commit/[0-9a-f]{4,40}$' <<<"$1"; then
+    elif grep -qE '^[^/]+/[^/]+/commit/[0-9a-f]{4,40}$' <<<"$1"; then
         if [ "${#POSITIONAL[@]}" -ne 1 ]; then
             echo "Error: Commit is already specified in the URL" >&2
             exit 1
         fi
-        GH_REPO="$(grep -Po '^[^/]+/[^/]+(?=/commit/)' <<<"$1")"
+        GH_REPO="$(grep -Eo '^[^/]+/[^/]+/commit/' <<<"$1")"
+        GH_REPO="${GH_REPO%/commit/}"
         BRANCH="$(sed -E 's_^[^/]+/[^/]+/commit/__' <<<"$1")"
-    elif grep -qP '^[^/]+/[^/]+/tree/' <<<"$1"; then
+    elif grep -qE '^[^/]+/[^/]+/tree/' <<<"$1"; then
         if [ "${#POSITIONAL[@]}" -ne 1 ]; then
             echo "Error: Branch is already specified in the URL" >&2
             exit 1
         fi
-        GH_REPO="$(grep -Po '^[^/]+/[^/]+(?=/tree/)' <<<"$1")"
+        GH_REPO="$(grep -Eo '^[^/]+/[^/]+/tree/' <<<"$1")"
+        GH_REPO="${GH_REPO%/tree/}"
         BRANCH="$(sed -E 's_^[^/]+/[^/]+/tree/__' <<<"$1")"
         AMBI=VERY_MUCH
-    elif grep -qP '^[^/]+/[^/]+/blob/' <<<"$1"; then
+    elif grep -qE '^[^/]+/[^/]+/blob/' <<<"$1"; then
         if [ -n "$PRESERVE" ]; then
             echo "Error: Conflict: -x|-g|--preserve-git and -- <path> (in the URL)" >&2
             exit 1
@@ -226,7 +228,8 @@ resolve_gh_url() {
             echo "Error: Branch is already specified in the URL" >&2
             exit 1
         fi
-        GH_REPO="$(grep -Po '^[^/]+/[^/]+(?=/blob/)' <<<"$1")"
+        GH_REPO="$(grep -Eo '^[^/]+/[^/]+/blob/' <<<"$1")"
+        GH_REPO="${GH_REPO%/blob/}"
         BRANCH="$(sed -E 's_^[^/]+/[^/]+/blob/__' <<<"$1")"
         AMBI=YES
     else
