@@ -175,26 +175,26 @@ The CLI is pretty self-explanatory:
     | https://github.com/<user>/<repo>/blob/<commitish>[/<path>]
 
 # Download a single repo (or part of):
-git-get [-v|--verbose|-q|--quiet] [-H|--https]
+git-get [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https]
     <specifier> [-o <target>] [-f|--force] [-F|--rm-rf]
-    (-x | [-t|--tag] [-- <path>])
+    (-x [-B] [-T] | [-t|--tag] [-- <path>])
 
 # Download a repo and its submodules:
-git gets [-v|--verbose|-q|--quiet] [-H|--https] [--no-recursive]
-    [-P|--parallel] [-c|--confirm]
+git gets [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https]
+    [-P|--parallel] [-c|--confirm] [--no-recursive]
     <specifier> [-o <target>] [-F|--rm-rf]
-    (-x | [-t|--tag])
+    (-x [-B] [-T] | [-t|--tag])
 
 # Download submodules of an existing repo:
-git gets [-v|--verbose|-q|--quiet] [-H|--https] [--no-recursive]
-    [-P|--parallel] [-c|--confirm] [--no-init]
+git gets [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https]
+    [-P|--parallel] [-c|--confirm] [--no-recursive] [--no-init]
 ```
 
 Some comments:
 
-* `-H|--https`:
-Use HTTPS instead of SSH when accesssing github.com and gist.github.com
-in the case when you don't have a ready-to-use SSH set-up.
+* `-s|--ssh` and `-H|--https`:
+Override using HTTPS or SSH when accesssing github.com and gist.github.com
+in the case when you don't have a ready-to-use SSH or HTTPS set-up,
 
 * `--no-recursive` and `--no-init`:
 The former one means that only *top-level* submodules are downloaded.
@@ -207,12 +207,15 @@ Finer control is feasible using `--confirm`.
 Override existing file with `-f|--force`.
 Override existing directory with `-F|--rm-rf`.
 
-* `-x`:
+* `-x`, `-B|--single-branch`, and `-T|--no-tags`:
 `-x` will keep the `.git` so you can make changes.
-The repository is NOT 100% the same as a regular `git-clone`'d one.
+The repository is NOT 100% the same as a regular `git-clone`'d one,
+as only commits are fetched but not file contents.
+You cannot use it together with `-t|--tag`.
 To take a deeper look at the difference, please read the following reference:
 [git partial clone](https://git-scm.com/docs/partial-clone).
-You cannot use it together with `-t|--tag`.
+For repos with many branches / git tags, specifying `-B` and/or `-T` will
+remove unused branches / git tags.
 
 * `-t|--tag`:
 Instead of keeping a respository, generate a single file called `VERSION`

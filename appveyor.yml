@@ -8,9 +8,9 @@ skip_commits:
   message: /\[ci skip\]|\[skip ci\]/
 
 image:
-  - Visual Studio 2019
-  - Ubuntu2004
   - macos
+  - Visual Studio 2022
+  - Ubuntu2004
 
 environment:
   MAKEFLAGS: -j8
@@ -19,15 +19,10 @@ for:
 -
   matrix:
     only:
-      - image: Visual Studio 2019
+      - image: Visual Studio 2022
 
   install:
     - choco install make
-
--
-  matrix:
-    only:
-      - image: macos
 
 before_build:
   - make --version
