@@ -1,0 +1,6 @@
+R="$(git-get https://github.com/b1f6c1c4/git-get/blob/2dd50b6425c7d79f4695aa69d05467e1a00fc20f/dir/file-in-dir)"
+
+[ -z "$R" ]
+[ -f file-in-dir ]
+
+rm file-in-dir
