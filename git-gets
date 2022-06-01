@@ -103,10 +103,8 @@ got_repo() {
     git config core.repositoryformatversion 0
     if [ "$PRESERVE" = X ] && [ -z "$SUBMODULE_MODE" ]; then
         git for-each-ref --format='delete %(refname)' >ref-del
-        git config remote.origin.tagOpt --tags
-        git config --unset remote.origin.tagOpt
-        git config remote.origin.mirror false
-        git config --unset remote.origin.mirror
+        git config --unset remote.origin.tagOpt || true
+        git config --unset remote.origin.mirror || true
         git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
         ARGS=(git fetch origin)
         [ -n "$QUIET" ] && ARGS+=(-q)
@@ -131,6 +129,16 @@ got_repo() {
             [ -z "$QUIET" ] && "${ARGS[@]}" >&2
             [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
             git symbolic-ref HEAD "refs/heads/$BRANCH"
+        fi
+        if [ -n "$CL_BRANCHES" ]; then
+            git config --unset remote.origin.fetch || true
+            [ -n "$SET_BR" ] && git config remote.origin.fetch "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+            git for-each-ref refs/remotes/origin/ --format='delete %(refname)' \
+                | sed "\|delete refs/remotes/origin/$BRANCH|d" | git update-ref --stdin
+        fi
+        if [ -n "$CL_TAGS" ]; then
+            git config remote.origin.tagOpt --no-tags
+            git for-each-ref refs/tags/ --format='delete %(refname)' | git update-ref --stdin
         fi
     fi
 
@@ -187,6 +195,8 @@ got_repo() {
         [ "$PRESERVE" = X ] && ARGS+=(-x) || ARGS+=(-g)
         [ -n "$GH_USE_HTTPS" ] && ARGS+=(--https)
         [ -n "$GH_USE_SSH" ] && ARGS+=(--ssh)
+        [ -n "$CL_BRANCHES" ] && ARGS+=(--single-branch)
+        [ -n "$CL_TAGS" ] && ARGS+=(--no-tags)
         [ -n "$PARALLEL" ] && ARGS+=(--parallel)
         [ -z "$PARALLEL" ] && [ -n "$CONFIRM" ] && ARGS+=(--confirm)
         [ -n "$NO_RECURSIVE" ] && ARGS+=(--no-recursive)
@@ -257,6 +267,8 @@ PARALLEL=
 CONFIRM=
 NO_INIT=
 NO_RECURSIVE=
+CL_BRANCHES=
+CL_TAGS=
 POSITIONAL=()
 while [ $# -gt 0 ]; do
     key="$1"
@@ -300,6 +312,14 @@ while [ $# -gt 0 ]; do
                 exit 1
             fi
             PRESERVE=X
+            shift
+            ;;
+        -B|--single-branch)
+            CL_BRANCHES=YES
+            shift
+            ;;
+        -T|--no-tags)
+            CL_TAGS=YES
             shift
             ;;
         -g|--preserve-git)
@@ -370,6 +390,14 @@ while [ $# -gt 0 ]; do
 done
 if [ -n "$PRESERVE" ] && [ -n "$TAG" ]; then
     echo "Error: Conflict: -x|-g|--preserve-git and -t|--tag|--tag-file" >&2
+    exit 1
+fi
+if [ -n "$CL_BRANCHES" ] && [ "$PRESERVE" != X ]; then
+    echo "Error: Conflict: --single-branch requires -x" >&2
+    exit 1
+fi
+if [ -n "$CL_TAGS" ] && [ "$PRESERVE" != X ]; then
+    echo "Error: Conflict: --no-tags requires -x" >&2
     exit 1
 fi
 

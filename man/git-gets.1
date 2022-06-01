@@ -97,6 +97,19 @@ To take a deeper look on this, please read the following reference:
 .UE .
 .RE
 .PP
+-B, --single-branch
+.RS 4
+Cleanup unnecessary remote-tracking branches except those explicitly
+specified in the command line.
+Only makes sense when \fB-x\fR is enabled.
+.RE
+.PP
+-T, --no-tags
+.RS 4
+Cleanup all tags, including those explicitly specified in the command line.
+Only makes sense when \fB-x\fR is enabled.
+.RE
+.PP
 -g, --preserve-git
 .RS 4
 Preserve the \fB.git\fR directory, but don't do anything superfluous

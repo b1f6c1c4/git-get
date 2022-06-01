@@ -1,0 +1,38 @@
+R="$(git-gets b1f6c1c4/git-get example-repo2 -x --single-branch)"
+
+[ -z "$R" ]
+[ "$(git -C git-get rev-parse HEAD)" = "2dd50b6425c7d79f4695aa69d05467e1a00fc20f" ]
+[ -z "$(git -C git-get config --get remote.origin.tagOpt)" ]
+[ -z "$(git -C git-get config --get remote.origin.mirror)" ]
+[ "$(git -C git-get config --get remote.origin.fetch)" = "+refs/heads/example-repo2:refs/remotes/origin/example-repo2" ]
+[ "$(git -C git-get symbolic-ref HEAD)" = "refs/heads/example-repo2" ]
+
+[ "$(git -C git-get/sub rev-parse HEAD)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
+[ -z "$(git -C git-get/sub config --get remote.origin.tagOpt)" ]
+[ -z "$(git -C git-get/sub config --get remote.origin.mirror)" ]
+[ -z "$(git -C git-get/sub config --get remote.origin.fetch)" ]
+[ "$(git -C git-get/sub rev-parse refs/heads/example-repo0 -- || echo good)" = "good" ]
+[ "$(git -C git-get/sub rev-parse refs/remotes/origin/example-repo0 -- || echo good)" = "good" ]
+[ "$(git -C git-get/sub rev-parse refs/tags/example-tag)" = "f774e3273eae40457109d04b0b5c5504047fac9d" ]
+! git -C git-get/sub symbolic-ref HEAD
+
+[ "$(git -C git-get/xsub rev-parse HEAD)" = "2c0d59d84b729758f978c827a47980946f9a0e99" ]
+[ -z "$(git -C git-get/xsub config --get remote.origin.tagOpt)" ]
+[ -z "$(git -C git-get/xsub config --get remote.origin.mirror)" ]
+[ -z "$(git -C git-get/xsub config --get remote.origin.fetch)" ]
+[ "$(git -C git-get/xsub rev-parse HEAD~)" = "e7b2ae86f8574a1e16c71150ec538d102e574ca5" ]
+[ "$(git -C git-get/xsub rev-parse refs/heads/example-repo0 -- || echo good)" = "good" ]
+[ "$(git -C git-get/xsub rev-parse refs/remotes/origin/example-repo0 -- || echo good)" = "good" ]
+[ "$(git -C git-get/xsub rev-parse refs/tags/example-tag)" = "f774e3273eae40457109d04b0b5c5504047fac9d" ]
+! git -C git-get/xsub symbolic-ref HEAD
+
+[ "$(git -C git-get/xsub/sub rev-parse HEAD)" = "bff56f7a1c9585780950dce5c1964410e0aa2ecc" ]
+[ -z "$(git -C git-get/xsub/sub config --get remote.origin.tagOpt)" ]
+[ -z "$(git -C git-get/xsub/sub config --get remote.origin.mirror)" ]
+[ -z "$(git -C git-get/xsub/sub config --get remote.origin.fetch)" ]
+[ "$(git -C git-get/xsub/sub rev-parse refs/heads/example-repo0 -- || echo good)" = "good" ]
+[ "$(git -C git-get/xsub rev-parse refs/remotes/origin/example-repo0 -- || echo good)" = "good" ]
+[ "$(git -C git-get/xsub/sub rev-parse refs/tags/example-tag)" = "f774e3273eae40457109d04b0b5c5504047fac9d" ]
+! git -C git-get/xsub/sub symbolic-ref HEAD
+
+rm -rf git-get
