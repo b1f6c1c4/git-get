@@ -648,7 +648,10 @@ got_repo() {
                 fi
                 OCWD="$OCWD" PREV_TAGS="$PREV_TAGS" "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
                 exit "$?"
-            done 3< <(sed -nE '/^\[submodule /{s/^\[submodule "(.*)"\]$/\1/;p}' "$1/.git/config")
+            done 3< <(sed -nE '/^\[submodule /{
+                s/^\[submodule "(.*)"\]$/\1/
+                p
+            }' "$1/.git/config")
         fi
 
         # git restore --worktree issue fetch-pack one-by-another
