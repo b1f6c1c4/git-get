@@ -87,14 +87,12 @@ while [ $# -gt 0 ]; do
             VERBOSE=YES
             shift
             ;;
-        -s|-ssh)
-            GH_USE_HTTPS=
+        -s|--ssh)
             GH_USE_SSH=YES
             shift
             ;;
         -H|--https)
             GH_USE_HTTPS=YES
-            GH_USE_SSH=
             shift
             ;;
         -f|--force)
@@ -605,6 +603,8 @@ got_repo() {
                 ARGS=("$0")
                 [ -n "$VERBOSE" ] && ARGS+=(--verbose)
                 [ -n "$QUIET" ] && ARGS+=(--quiet)
+                [ -n "$GH_USE_HTTPS" ] && ARGS+=(--https)
+                [ -n "$GH_USE_SSH" ] && ARGS+=(--ssh)
                 ARGS+=("$URL" "$SSHA1")
                 ARGS+=(-o "$OUTPUT")
                 [ -n "$FORCE" ] && ARGS+=(--force)

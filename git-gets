@@ -185,6 +185,8 @@ got_repo() {
         [ -n "$VERBOSE" ] && ARGS+=(--verbose)
         [ -n "$QUIET" ] && ARGS+=(--quiet)
         [ "$PRESERVE" = X ] && ARGS+=(-x) || ARGS+=(-g)
+        [ -n "$GH_USE_HTTPS" ] && ARGS+=(--https)
+        [ -n "$GH_USE_SSH" ] && ARGS+=(--ssh)
         [ -n "$PARALLEL" ] && ARGS+=(--parallel)
         [ -z "$PARALLEL" ] && [ -n "$CONFIRM" ] && ARGS+=(--confirm)
         [ -n "$NO_RECURSIVE" ] && ARGS+=(--no-recursive)
@@ -275,14 +277,12 @@ while [ $# -gt 0 ]; do
             VERBOSE=YES
             shift
             ;;
-        -s|-ssh)
-            GH_USE_HTTPS=
+        -s|--ssh)
             GH_USE_SSH=YES
             shift
             ;;
         -H|--https)
             GH_USE_HTTPS=YES
-            GH_USE_SSH=
             shift
             ;;
         -F|--rm-rf)
@@ -498,7 +498,7 @@ fi
 
 match_gh_url() {
     [[ ! "${POSITIONAL[0]}" =~ ^$1 ]] && return 1
-    [ -z "$2" ] && [ -z "$QUIET" ] && echo "Warning: $1 is an unencryped protocol" >&2
+    [ -n "$2" ] && [ -z "$QUIET" ] && echo "Warning: $1 is an unencryped protocol" >&2
     GITHUB=REPO
     GH_REPO="${POSITIONAL[0]#${1}}"
     GH_REPO="${GH_REPO%/}"
