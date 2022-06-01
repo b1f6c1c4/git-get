@@ -1,6 +1,7 @@
 R="$(git-gets b1f6c1c4/git-get example-repo2)"
 
 [ -z "$R" ]
+[ ! -e git-get/.git ]
 [ -L git-get/link ]
 [ -L git-get/sub/link ]
 [ -L git-get/xsub/link ]

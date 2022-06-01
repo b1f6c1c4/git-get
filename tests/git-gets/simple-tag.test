@@ -2,6 +2,7 @@ R="$(git-gets b1f6c1c4/git-get example-repo2 -t)"
 
 [ -z "$R" ]
 [ "$(cat git-get/VERSION)" = "2dd50b6425c7d79f4695aa69d05467e1a00fc20f" ]
+[ ! -e git-get/.git ]
 [ -L git-get/link ]
 [ -L git-get/sub/link ]
 [ -L git-get/xsub/link ]
