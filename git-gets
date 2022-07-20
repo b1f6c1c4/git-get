@@ -392,14 +392,6 @@ if [ -n "$PRESERVE" ] && [ -n "$TAG" ]; then
     echo "Error: Conflict: -x|-g|--preserve-git and -t|--tag|--tag-file" >&2
     exit 1
 fi
-if [ -n "$CL_BRANCHES" ] && [ "$PRESERVE" != X ]; then
-    echo "Error: Conflict: --single-branch requires -x" >&2
-    exit 1
-fi
-if [ -n "$CL_TAGS" ] && [ "$PRESERVE" != X ]; then
-    echo "Error: Conflict: --no-tags requires -x" >&2
-    exit 1
-fi
 
 if [ "${#POSITIONAL[@]}" -eq 0 ]; then
     if git rev-parse HEAD >/dev/null 2>&1; then
@@ -426,6 +418,17 @@ else
         OUTPUT="${POSITIONAL[2]}"
     else
         echo "Error: Too many positional arguments." >&2
+        exit 1
+    fi
+fi
+
+if [ -z "$SUBMODULE_MODE" ]; then
+    if [ -n "$CL_BRANCHES" ] && [ "$PRESERVE" != X ]; then
+        echo "Error: Conflict: --single-branch requires -x" >&2
+        exit 1
+    fi
+    if [ -n "$CL_TAGS" ] && [ "$PRESERVE" != X ]; then
+        echo "Error: Conflict: --no-tags requires -x" >&2
         exit 1
     fi
 fi
