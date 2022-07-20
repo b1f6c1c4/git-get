@@ -70,6 +70,7 @@ PRESERVE=
 TAG=
 TAG_FILE=
 DIR=
+SPARSE=
 CL_BRANCHES=
 CL_TAGS=
 POSITIONAL=()
@@ -218,10 +219,6 @@ fi
 
 if [ -n "$PRESERVE" ] && [ -n "$TAG" ]; then
     echo "${C_ERR}Error: Conflict: -x|-g|--preserve-git and -t|--tag|--tag-file${C_RST}" >&2
-    exit 1
-fi
-if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
-    echo "Error: Conflict: -x|-g|--preserve-git and -- <path>" >&2
     exit 1
 fi
 if [ -n "$GH_USE_HTTPS" ] && [ -n "$GH_USE_SSH" ]; then
@@ -396,13 +393,13 @@ match_gh_url "https://github.com/" '' resolve_gh_url ||
     fi
 
 if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
-    echo "${C_ERR}Error: Can't use an URL (of a folder or file) with -x|-g|--preserve-git${C_RST}" >&2
-    exit 1
+    echo "${C_WARN}Warning: Using -x|-g|--preserve-git and -- <path> at the same time results in git sparse-checkout${C_RST}" >&2
+    SPARSE=YES
 fi
 
 DIR="$(normalize "$DIR")"
 
-if [ -n "$DIR" ]; then
+if [ -z "$PRESERVE" ] && [ -n "$DIR" ]; then
     BASENAME="$(basename "$DIR")"
 elif [ "$GITHUB" = GIST ]; then
     BASENAME="$GH_REPO"
@@ -465,6 +462,7 @@ if [ -n "$VERBOSE" ]; then
     printf "${C_DBG}REPO=%q${C_RST}\n" "$REPO" >&2
     printf "${C_DBG}BRANCH=%q${C_RST}\n" "$BRANCH" >&2
     printf "${C_DBG}DIR=%q${C_RST}\n" "$DIR" >&2
+    printf "${C_DBG}SPARSE=%q${C_RST}\n" "$SPARSE" >&2
     printf "${C_DBG}BASENAME=%q${C_RST}\n" "$BASENAME" >&2
     printf "${C_DBG}PREV_TAGS=%q${C_RST}\n" "$PREV_TAGS" >&2
 fi
@@ -606,7 +604,7 @@ got_repo() {
     git config --bool core.bare false
     git config core.repositoryformatversion 0
 
-    if [ -z "$DIR" ]; then
+    if [ -z "$DIR" ] || [ -n "$SPARSE" ]; then
         if [ "$PRESERVE" = X ]; then
             git for-each-ref --format='delete %(refname)' >ref-del
             git config --unset remote.origin.tagOpt || true
@@ -648,6 +646,13 @@ got_repo() {
             fi
         fi
         unset GIT_DIR
+        if [ -n "$DIR" ]; then
+            ARGS=(git sparse-checkout set "$DIR")
+            [ -n "$QUIET" ] && ARGS+=(-q)
+            [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+            [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+        fi
         ARGS=(git reset --hard)
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
@@ -765,6 +770,7 @@ if git_new; then
         [ ! "$BRANCH" = "HEAD" ] && ARGS+=(--branch "$BRANCH")
         ARGS+=(--depth 1 --no-tags)
         [ -n "$DIR" ] && ARGS+=(--filter blob:none)
+        [ -n "$SPARSE" ] && ARGS+=(--sparse)
         ARGS+=("$REPO" "$BASENAME/.git")
         [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         set +e
