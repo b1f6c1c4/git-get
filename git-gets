@@ -233,7 +233,7 @@ got_repo() {
             elif [ -z "$CONFIRM" ]; then
                 RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2 &
             else
-                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >>"$WORK_DIR/parallel.log" &
+                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >>"$TMP_LOG" &
             fi
         else
             [ -z "$QUIET" ] && printf '%s %s %s %s\n' '---' "$PA" "$URL" "$SSHA1">&2
@@ -242,7 +242,7 @@ got_repo() {
 
     [ -z "$RAW" ] && [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ] && [ -z "$QUIET" ] && printf 'Waiting for sub-processes to finish, please be patient ...' >&2
     wait
-    [ -z "$RAW" ] && [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ] && cat "$WORK_DIR/parallel.log" >&2
+    [ -z "$RAW" ] && [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ] && cat "$TMP_LOG" >&2
 
     if [ -z "$RAW" ]; then
         ARGS=(git -C "$GIT_WORK_TREE" submodule)
@@ -516,6 +516,12 @@ if [ -n "$SUBMODULE_MODE" ]; then
         printf 'GIT_DIR=%q\n' "$GIT_DIR" >&2
         printf 'GIT_WORK_TREE=%q\n' "$GIT_WORK_TREE" >&2
     fi
+    TMP_LOG="$(realpath "$(mktemp)")"
+    finish() {
+        cd /
+        rm -f "$TMP_LOG"
+    }
+    trap finish EXIT
 
     cd "$GIT_WORK_TREE"
     if [ -n "$(git status --porcelain --untracked-files=no --ignore-submodules=dirty --ignored=no)" ]; then
@@ -617,6 +623,7 @@ finish() {
 }
 trap finish EXIT
 cd "$WORK_DIR"
+TMP_LOG="$WORK_DIR/parallel.log"
 
 [ -n "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
 
