@@ -2,6 +2,9 @@ R="$(git-gets b1f6c1c4/git-get example-repo2 -c <<<nyn)"
 
 [ -z "$R" ]
 [ ! -e git-get/.git ]
+[ ! -e git-get/sub/.git ]
+[ ! -e git-get/xsub/.git ]
+[ ! -e git-get/xsub/sub/.git ]
 [   -L git-get/link ]
 [ ! -L git-get/sub/link ]
 [   -L git-get/xsub/link ]

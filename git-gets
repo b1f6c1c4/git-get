@@ -271,7 +271,8 @@ got_repo() {
             [ -n "$VERBOSE" ] && ARGS+=(--verbose)
             [ -n "$QUIET" ] && ARGS+=(--quiet)
             [ -n "$COLOR" ] && ARGS+=(--color=always) || ARGS+=(--color=never)
-            [ "$PRESERVE" = X ] && ARGS+=(-x) || ARGS+=(-g)
+            [ "$PRESERVE" = X ] && ARGS+=(-x)
+            [ "$PRESERVE" = G ] && ARGS+=(-g)
             [ -n "$GH_USE_HTTPS" ] && ARGS+=(--https)
             [ -n "$GH_USE_SSH" ] && ARGS+=(--ssh)
             [ -n "$CL_BRANCHES" ] && ARGS+=(--single-branch)
@@ -319,7 +320,7 @@ got_repo() {
     wait
     [ -z "$RAW" ] && [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ] && cat "$TMP_LOG" >&2
 
-    if [ -z "$RAW" ]; then
+    if [ -z "$RAW" ] && [ -n "$PRESERVE" ]; then
         ARGS=(git -C "$GIT_WORK_TREE" submodule)
         [ -n "$QUIET" ] && ARGS+=(--quiet)
         ARGS+=(absorbgitdirs)
