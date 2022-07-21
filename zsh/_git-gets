@@ -1,0 +1,21 @@
+#compdef git-gets
+
+_arguments -s -S -A "-*" \
+  '(*)'{-V,--version}'[Show git-gets version]' \
+  '(*)'{-h,--help}'[Show documentation]' \
+  '(-v --verbose)'{-v,--verbose}'[Show intermediate steps]' \
+  '(-q --quiet)'{-q,--quiet}'[Hide every intermediate information but errors]' \
+  '(--color --colour)'{--color=,--colour=}'[Display steps in color]:when:(never always auto)' \
+  '(-s --ssh -H --https)'{-s,--ssh}'[Enforce SSH protocol]' \
+  '(-H --https -s --ssh)'{-H,--https}'[Enforce HTTPS protocol]' \
+  '--no-recursive[Only top-level submodules]' \
+  '(-o --output)'{-o+,--output=}'[Put the download file or directory here]:directory:_files' \
+  '(-F --rm-rf)'{-F,--rm-rf}'[Override an existing folder]' \
+  '(-g --preserve-git -t --tag-file)-x[Preserve and enhance the .git directory]' \
+  '(-B --single-branch)'{-B,--single-branch}'[Cleanup unnecessary branches]' \
+  '(-T --no-tags)'{-T,--no-tags}'[Cleanup all tags]' \
+  '(-g --preserve-git -x -t --tag-file)'{-g,--preserve-git}'[Preserve the .git directory]' \
+  '(-t --tag-file)'{-t+,--tag-file=}'[Generate a tag file (default=VERSION)]:file:_files' \
+  '(-P --parallel)'{-P,--parallel}'[Launch multiple instances of git-clone]' \
+  '(-c --confirm)'{-c,--confirm}'[Prompt the user before downloading]' \
+  '--no-init[Only download already inited top-level submodules]'
