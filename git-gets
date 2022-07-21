@@ -668,8 +668,13 @@ fi
 
 WORK_DIR="$(realpath "$(mktemp -d)")"
 finish() {
+    set +eu
     cd /
-    rm -rf "$WORK_DIR"
+    if [ -n "$KEEP_WORK_DIR" ]; then
+        printf "${C_WARN}Notice: WORK_DIR located at %s${C_RST}\n" "$WORK_DIR"
+    else
+        rm -rf "$WORK_DIR"
+    fi
 }
 trap finish EXIT
 cd "$WORK_DIR"
