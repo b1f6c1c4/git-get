@@ -161,9 +161,18 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --)
-            DIR="$2"
-            shift
-            shift
+            if [ "$#" -eq 2 ]; then
+                DIR="$2"
+                shift
+                shift
+            elif [ "$#" -eq 1 ]; then
+                DIR=
+                SPARSE=YES
+                shift
+            else
+                echo "Error: Only one <dir> allowed after --, I saw $*" >&2
+                exit 1
+            fi
             break
             ;;
         *)
@@ -761,7 +770,7 @@ if git_new; then
         set +e
         if "${ARGS[@]}" 2>&1 | tee clone.log >&2; then
             set -e
-            export GIT_DIR="$BASENAME/.git"
+            export GIT_DIR="$(realpath "$BASENAME/.git")"
             got_repo "$BASENAME" "$(git rev-parse HEAD)"
         fi
         set -e
@@ -777,7 +786,7 @@ if git_new; then
         [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         set +e
         if "${ARGS[@]}"; then
-            export GIT_DIR="$BASENAME/.git"
+            export GIT_DIR="$(realpath "$BASENAME/.git")"
             SHA1="$(git rev-parse "$BRANCH")"
             if [ -n "$SHA1" ]; then
                 [ -z "$QUIET" ] && printf "${C_INFO}Got SHA1: %q${C_RST}\n" "$SHA1" >&2
