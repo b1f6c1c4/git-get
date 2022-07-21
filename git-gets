@@ -170,6 +170,7 @@ got_repo() {
         exec 4>&2
     fi
 
+    CONFIRM_GOING_STATUS=
     while IFS= read -r -u 3 line; do
         PA="$(git -C "$GIT_WORK_TREE" config --file ".gitmodules" "submodule.$line.path" || echo '')"
         if [ -z "$PA" ]; then
@@ -189,38 +190,74 @@ got_repo() {
             [ -z "$QUIET" ] && printf "${C_WARN}Warning: Skipping %s because the folder is not empty${C_RST}\n" "$PA" >&2
             continue
         fi
-        ARGS=("$0")
-        [ -n "$VERBOSE" ] && ARGS+=(--verbose)
-        [ -n "$QUIET" ] && ARGS+=(--quiet)
-        [ -n "$COLOR" ] && ARGS+=(--color=always) || ARGS+=(--color=never)
-        [ "$PRESERVE" = X ] && ARGS+=(-x) || ARGS+=(-g)
-        [ -n "$GH_USE_HTTPS" ] && ARGS+=(--https)
-        [ -n "$GH_USE_SSH" ] && ARGS+=(--ssh)
-        [ -n "$CL_BRANCHES" ] && ARGS+=(--single-branch)
-        [ -n "$CL_TAGS" ] && ARGS+=(--no-tags)
-        [ -n "$PARALLEL" ] && ARGS+=(--parallel)
-        [ -z "$PARALLEL" ] && [ -n "$CONFIRM" ] && ARGS+=(--confirm)
-        [ -n "$NO_RECURSIVE" ] && ARGS+=(--no-recursive)
-        ARGS+=(-o "$GIT_WORK_TREE/$PA" "$URL" "$SSHA1")
-        GO=YES
-        if [ -n "$CONFIRM" ]; then
+        if [ "$CONFIRM_GOING_STATUS" = A ]; then
+            GO=YES
+        elif [ "$CONFIRM_GOING_STATUS" = D ]; then
+            GO=
+        elif [ -z "$CONFIRM" ]; then
+            GO=YES
+        else
             while true; do
                 [ -z "$RAW" ] && printf "${C_WARN}On the toplevel:${C_RST}\n" >&2
                 [ -n "$RAW" ] && printf "${C_WARN}Inside the submodule %s:${C_RST}\n" "$RAW" >&2
-                printf "${C_WARN}Will clone %s from %s, proceed? (Y/n) ... ${C_RST}" "$PA" "$URL" >&2
+                printf "${C_WARN}Will clone %s from %s, proceed? (Y/n/r/p/s/q/a/d/?) ... ${C_RST}" "$PA" "$URL" >&2
                 read -n 1 -r
                 case "$REPLY" in
                     "")
+                        GO=YES
                         break
                         ;;
-                    y|Y)
+                    y)
                         printf '\n' >&2
+                        GO=YES
                         break
                         ;;
-                    n|N)
+                    n)
                         printf '\n' >&2
                         GO=
                         break
+                        ;;
+                    r)
+                        printf '\n' >&2
+                        GO=R
+                        break
+                        ;;
+                    p)
+                        printf '\n' >&2
+                        GO=P
+                        break
+                        ;;
+                    s)
+                        printf '\n' >&2
+                        GO=S
+                        break
+                        ;;
+                    q)
+                        printf '\n' >&2
+                        exit 5
+                        ;;
+                    a)
+                        printf '\n' >&2
+                        GO=YES
+                        CONFIRM_GOING_STATUS=A
+                        break
+                        ;;
+                    d)
+                        printf '\n' >&2
+                        GO=
+                        CONFIRM_GOING_STATUS=D
+                        break
+                        ;;
+                    ?)
+                        printf '\n' >&2
+                        echo "${C_DBG}y - clone it${C_RST}" >&2
+                        echo "${C_DBG}n - skip it${C_RST}" >&2
+                        echo "${C_DBG}r - clone it, and all its own submodules${C_RST}" >&2
+                        echo "${C_DBG}p - like r, but in parallel${C_RST}" >&2
+                        echo "${C_DBG}s - clone it, but not its own submodules${C_RST}" >&2
+                        echo "${C_DBG}q - quit git-gets immediately${C_RST}" >&2
+                        echo "${C_DBG}a - clone it and all other submodules${C_RST}" >&2
+                        echo "${C_DBG}d - skip it and all other submodules${C_RST}" >&2
                         ;;
                     *)
                         printf '\n' >&2
@@ -230,6 +267,34 @@ got_repo() {
         fi
         if [ -n "$GO" ]; then
             [ -z "$QUIET" ] && printf "${C_NOTICE}+++ %s %s %s${C_RST}\n" "$PA" "$URL" "$SSHA1">&2
+            ARGS=("$0")
+            [ -n "$VERBOSE" ] && ARGS+=(--verbose)
+            [ -n "$QUIET" ] && ARGS+=(--quiet)
+            [ -n "$COLOR" ] && ARGS+=(--color=always) || ARGS+=(--color=never)
+            [ "$PRESERVE" = X ] && ARGS+=(-x) || ARGS+=(-g)
+            [ -n "$GH_USE_HTTPS" ] && ARGS+=(--https)
+            [ -n "$GH_USE_SSH" ] && ARGS+=(--ssh)
+            [ -n "$CL_BRANCHES" ] && ARGS+=(--single-branch)
+            [ -n "$CL_TAGS" ] && ARGS+=(--no-tags)
+            [ -n "$PARALLEL" ] && ARGS+=(--parallel)
+            case "$GO" in
+                R)
+                    # overrides --no-recursive
+                    # overrides --confirm
+                    ;;
+                P)
+                    ARGS+=(--parallel)
+                    ;;
+                S)
+                    ARGS+=(--no-recursive)
+                    # --confirm is unnecessary here
+                    ;;
+                *)
+                    [ -n "$NO_RECURSIVE" ] && ARGS+=(--no-recursive)
+                    [ -z "$PARALLEL" ] && [ -n "$CONFIRM" ] && ARGS+=(--confirm)
+                    ;;
+            esac
+            ARGS+=(-o "$GIT_WORK_TREE/$PA" "$URL" "$SSHA1")
             [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
             rmdir "$GIT_WORK_TREE/$PA"
             if [ -n "$PARALLEL" ]; then
