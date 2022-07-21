@@ -186,7 +186,7 @@ got_repo() {
         if rmdir "$GIT_WORK_TREE/$PA"; then
             true
         else
-            printf "${C_WARN}Warning: Skipping %s because the folder is not empty${C_RST}\n" "$PA" >&2
+            [ -z "$QUIET" ] && printf "${C_WARN}Warning: Skipping %s because the folder is not empty${C_RST}\n" "$PA" >&2
             continue
         fi
         ARGS=("$0")
@@ -500,7 +500,7 @@ if ! which git >/dev/null; then
     exit 66
 fi
 
-git_new || ([ -n "$QUIET" ] && printf "${C_WARN}Warning: You should upgrade your git (currently %s)${C_RST}\n" "$(git version)" >&2)
+git_new || ([ -z "$QUIET" ] && printf "${C_WARN}Warning: You should upgrade your git (currently %s)${C_RST}\n" "$(git version)" >&2)
 
 if [ -n "$TAG" ]; then
     if [ -z "$TAG_FILE" ]; then

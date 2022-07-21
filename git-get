@@ -422,7 +422,7 @@ if ! which git >/dev/null; then
     exit 66
 fi
 
-git_new || ([ -n "$QUIET" ] && printf "${C_WARN}Warning: You should upgrade your git (currently %s)${C_RST}\n" "$(git version)" >&2)
+git_new || ([ -z "$QUIET" ] && printf "${C_WARN}Warning: You should upgrade your git (currently %s)${C_RST}\n" "$(git version)" >&2)
 
 if [ "$BRANCH" = "HEAD" ]; then
     [ -n "$VERBOSE" ] && echo "${C_INFO}Resolving HEAD...${C_RST}" >&2
