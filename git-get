@@ -393,7 +393,7 @@ match_gh_url "https://github.com/" '' resolve_gh_url ||
     fi
 
 if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
-    echo "${C_WARN}Warning: Using -x|-g|--preserve-git and -- <path> at the same time results in git sparse-checkout${C_RST}" >&2
+    [ -z "$QUIET" ] && echo "${C_WARN}Warning: Using -x|-g|--preserve-git and -- <path> at the same time results in git sparse-checkout${C_RST}" >&2
     SPARSE=YES
 fi
 
@@ -604,73 +604,62 @@ got_repo() {
     git config --bool core.bare false
     git config core.repositoryformatversion 0
 
-    if [ -z "$DIR" ] || [ -n "$SPARSE" ]; then
-        if [ "$PRESERVE" = X ]; then
-            git for-each-ref --format='delete %(refname)' >ref-del
-            git config --unset remote.origin.tagOpt || true
-            git config --unset remote.origin.mirror || true
-            git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-            ARGS=(git fetch origin)
-            [ -n "$QUIET" ] && ARGS+=(-q)
-            [ -z "$QUIET" ] && "${ARGS[@]}" >&2
-            [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
-            if git show-ref --verify "refs/heads/$BRANCH" >/dev/null 2>/dev/null; then
-                [ -n "$VERBOSE" ] && echo "${C_INFO}Set branch: refs/heads/$BRANCH${C_RST}" >&2
-                SET_BR=YES
-            else
-                [ -n "$VERBOSE" ] && echo "${C_INFO}Not a valid branch: refs/heads/$BRANCH${C_RST}" >&2
-                SET_BR=
-            fi
-            git update-ref --stdin <ref-del
-            ARGS=(git fetch origin)
-            [ -n "$QUIET" ] && ARGS+=(-q)
-            [ -z "$QUIET" ] && "${ARGS[@]}" >&2
-            [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
-            if [ -n "$SET_BR" ]; then
-                ARGS=(git branch -f "$BRANCH")
-                ARGS+=("refs/remotes/origin/$BRANCH")
-                [ -n "$QUIET" ] && ARGS+=(-q)
-                [ -z "$QUIET" ] && "${ARGS[@]}" >&2
-                [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
-                git symbolic-ref HEAD "refs/heads/$BRANCH"
-            fi
-            if [ -n "$CL_BRANCHES" ]; then
-                git config --unset remote.origin.fetch || true
-                [ -n "$SET_BR" ] && git config remote.origin.fetch "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
-                git for-each-ref refs/remotes/origin/ --format='delete %(refname)' \
-                    | sed "\|delete refs/remotes/origin/$BRANCH|d" | git update-ref --stdin
-            fi
-            if [ -n "$CL_TAGS" ]; then
-                git config remote.origin.tagOpt --no-tags
-                git for-each-ref refs/tags/ --format='delete %(refname)' | git update-ref --stdin
-            fi
-        fi
-        unset GIT_DIR
-        if [ -n "$DIR" ]; then
-            ARGS=(git sparse-checkout set "$DIR")
-            [ -n "$QUIET" ] && ARGS+=(-q)
-            [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
-            [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-            [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-        fi
-        ARGS=(git reset --hard)
+    # tune the repo due to filter and promisor
+    if [ "$PRESERVE" = X ]; then
+        git for-each-ref --format='delete %(refname)' >ref-del
+        git config --unset remote.origin.tagOpt || true
+        git config --unset remote.origin.mirror || true
+        git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+        ARGS=(git fetch origin)
         [ -n "$QUIET" ] && ARGS+=(-q)
-        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
-        [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
-        [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
-        [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
-        got_dir "$1" "$2" && exit 0
-    else
+        [ -z "$QUIET" ] && "${ARGS[@]}" >&2
+        [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+        if git show-ref --verify "refs/heads/$BRANCH" >/dev/null 2>/dev/null; then
+            [ -n "$VERBOSE" ] && echo "${C_INFO}Set branch: refs/heads/$BRANCH${C_RST}" >&2
+            SET_BR=YES
+        else
+            [ -n "$VERBOSE" ] && echo "${C_INFO}Not a valid branch: refs/heads/$BRANCH${C_RST}" >&2
+            SET_BR=
+        fi
+        git update-ref --stdin <ref-del
+        ARGS=(git fetch origin)
+        [ -n "$QUIET" ] && ARGS+=(-q)
+        [ -z "$QUIET" ] && "${ARGS[@]}" >&2
+        [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+        if [ -n "$SET_BR" ]; then
+            ARGS=(git branch -f "$BRANCH")
+            ARGS+=("refs/remotes/origin/$BRANCH")
+            [ -n "$QUIET" ] && ARGS+=(-q)
+            [ -z "$QUIET" ] && "${ARGS[@]}" >&2
+            [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
+            git symbolic-ref HEAD "refs/heads/$BRANCH"
+        fi
+        if [ -n "$CL_BRANCHES" ]; then
+            git config --unset remote.origin.fetch || true
+            [ -n "$SET_BR" ] && git config remote.origin.fetch "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+            git for-each-ref refs/remotes/origin/ --format='delete %(refname)' \
+                | sed "\|delete refs/remotes/origin/$BRANCH|d" | git update-ref --stdin
+        fi
+        if [ -n "$CL_TAGS" ]; then
+            git config remote.origin.tagOpt --no-tags
+            git for-each-ref refs/tags/ --format='delete %(refname)' | git update-ref --stdin
+        fi
+    fi
+
+    # submodule walker
+    P=""
+    if [ -n "$DIR" ]; then
         # This workaround fixes #14 (https://github.com/b1f6c1c4/git-get/issues/14)
         # which is caused by https://github.com/git/git/commit/35a9f1e99c5d31635bb78a4f2d498e72c04fc471
-        P=""
+        # P is the path to the immediate submodule
         while IFS= read -r -u 3 line; do
             TP="$(cut -d $'\t' -f 2 <<<"$line")"
             if [ "$TP" = "$DIR" ] || [ ! "${DIR#${TP}/}" = "$DIR" ]; then
                 P="$TP"
             fi
         done 3< <(git ls-tree HEAD -r | grep '^160000 commit ')
-        unset GIT_DIR
+        # actually walk thru submodules
+        # Note: this code only returns when $PRESERVE != ""
         if [ -n "$P" ]; then
             [ -n "$VERBOSE" ] && printf "${C_INFO}Checking %q -> %s (%q)${C_RST}\n" "$DIR" "commit" "$P" >&2
 
@@ -690,12 +679,16 @@ got_repo() {
             [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
             [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
+            # loop over .gitmodules to find the correct entry
+            # due to previous git checkout -- $P, usually only one entry is here
             while IFS= read -r -u 3 line; do
                 PA="$(git config --file "$1/.gitmodules" "submodule.$line.path")"
                 URL="$(git config --file "$1/.git/config" "submodule.$line.url")"
                 SSHA1="$(git --git-dir="$1/.git" ls-files -s "$PA" | cut -d ' ' -f2)"
-                [ -n "$VERBOSE" ] && printf "${C_WARN}%s %s %s %s${C_RST}\n" "$line" "$PA" "$URL" "$SSHA1" >&2
+                [ -n "$VERBOSE" ] && printf "${C_DBG}%s %s %s %s${C_RST}\n" "$line" "$PA" "$URL" "$SSHA1" >&2
                 [ ! "$PA" = "$P" ] && continue
+                [ -z "$QUIET" ] && printf "${C_WARN}+++ %s %s %s${C_RST}\n" "$PA" "$URL" "$SSHA1">&2
+                # recursively call git-get(1)
                 ARGS=("$0")
                 [ -n "$VERBOSE" ] && ARGS+=(--verbose)
                 [ -n "$QUIET" ] && ARGS+=(--quiet)
@@ -710,7 +703,6 @@ got_repo() {
                 [ -n "$FORCE_DIR" ] && ARGS+=(--rm-rf)
                 [ -n "$TAG_FILE" ] && ARGS+=(--tag-file "$TAG_FILE")
                 [ ! "$P" = "$DIR" ] && ARGS+=(-- "${DIR#$P/}")
-                [ -z "$QUIET" ] && printf "${C_WARN}+++ %s %s %s${C_RST}\n" "$PA" "$URL" "$SSHA1">&2
                 [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
                 if [ -z "$PREV_TAGS" ]; then
                     PREV_TAGS="$2"
@@ -718,13 +710,21 @@ got_repo() {
                     PREV_TAGS="$(printf '%s\n%s' "$PREV_TAGS" "$2")"
                 fi
                 OCWD="$OCWD" PREV_TAGS="$PREV_TAGS" "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
-                exit "$?"
+                R="$?"
+                if [ "$R" -ne 0 ] || [ -z "$PRESERVE" ]; then
+                    exit "$R"
+                else
+                    break
+                fi
             done 3< <(sed -nE '/^\[submodule /{
                 s/^\[submodule "(.*)"\]$/\1/
                 p
             }' "$1/.git/config")
         fi
+    fi
 
+    # collect results
+    if [ -n "$DIR" ]; then
         # git restore --worktree issue fetch-pack one-by-another
         # which is super slow
 
@@ -756,6 +756,23 @@ got_repo() {
         [ -L "$1/$DIR" ] && got_file "$1/$DIR" "$2" LINK
         echo "${C_ERR}Error: File type not supported.${C_RST}" >&2
         exit 2
+    fi
+
+    if [ -z "$DIR" ] || [ -n "$SPARSE" ]; then
+        if [ -n "$DIR" ]; then
+            ARGS=(git sparse-checkout set "$DIR")
+            [ -n "$QUIET" ] && ARGS+=(-q)
+            [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
+            [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+            [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+        fi
+        ARGS=(git reset --hard)
+        [ -n "$QUIET" ] && ARGS+=(-q)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
+        [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
+        [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
+        [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
+        got_dir "$1" "$2"
     fi
 }
 
