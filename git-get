@@ -74,8 +74,7 @@ CL_BRANCHES=
 CL_TAGS=
 POSITIONAL=()
 while [ $# -gt 0 ]; do
-    key="$1"
-    case "$key" in
+    case "$1" in
         -V|--version)
             echo "git-get(1) $GIT_GET_VERSION"
             exit
@@ -689,7 +688,7 @@ got_repo() {
                 ARGS+=("$URL" "$SSHA1")
                 ARGS+=(-o "$OUTPUT")
                 [ -n "$FORCE" ] && ARGS+=(--force)
-                [ -n "$FORCE_DIR" ] && ARGS+=(--force-dir)
+                [ -n "$FORCE_DIR" ] && ARGS+=(--rm-rf)
                 [ -n "$TAG_FILE" ] && ARGS+=(--tag-file "$TAG_FILE")
                 [ ! "$P" = "$DIR" ] && ARGS+=(-- "${DIR#$P/}")
                 [ -z "$QUIET" ] && printf "${C_WARN}+++ %s %s %s${C_RST}\n" "$PA" "$URL" "$SSHA1">&2

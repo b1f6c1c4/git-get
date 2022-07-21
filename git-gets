@@ -280,8 +280,7 @@ CL_BRANCHES=
 CL_TAGS=
 POSITIONAL=()
 while [ $# -gt 0 ]; do
-    key="$1"
-    case "$key" in
+    case "$1" in
         -V|--version)
             echo "git-gets(1) $GIT_GET_VERSION"
             exit
