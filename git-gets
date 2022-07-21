@@ -60,30 +60,30 @@ got_dir() {
         (cd "$(dirname "$1")" && tar c "$(basename "$1")")
     elif [ -d "$OUTPUT" ]; then
         if [ -n "$FORCE_DIR" ]; then
-            [ -z "$QUIET" ] && printf 'Warning: Overriding directory %q\n' "$OUTPUT" >&2
+            [ -z "$QUIET" ] && printf "${C_WARN}Warning: Overriding directory %q${C_RST}\n" "$OUTPUT" >&2
             rm -rf "$OUTPUT" && mv "$1" "$OUTPUT"
         else
-            printf 'Error: Directory %q exists\n' "$OUTPUT" >&2
+            printf "${C_ERR}Error: Directory %q exists${C_RST}\n" "$OUTPUT" >&2
             exit 1
         fi
     elif [ -f "$OUTPUT" ]; then
         if [ -n "$FORCE_DIR" ]; then
-            [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
+            [ -z "$QUIET" ] && printf "${C_WARN}Warning: Overriding file %q${C_RST}\n" "$OUTPUT" >&2
             rm -f "$OUTPUT" && mv "$1" "$OUTPUT"
         else
-            printf 'Error: File %q exists\n' "$OUTPUT" >&2
+            printf "${C_ERR}Error: File %q exists${C_RST}\n" "$OUTPUT" >&2
             exit 1
         fi
     elif [ -e "$OUTPUT" ]; then
-        printf 'Error: Weird file %q exists\n' "$OUTPUT" >&2
+        printf "${C_ERR}Error: Weird file %q exists${C_RST}\n" "$OUTPUT" >&2
         exit 1
     else
         mv "$1" "$OUTPUT"
     fi
-    [ -n "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
+    [ -n "$VERBOSE" ] && printf "${C_DBG}size used in /tmp = %s${C_RST}\n" "$(du -sh "$WORK_DIR")" >&2
     T="$2"
     if [ -z "$TAG_FILE" ]; then
-        [ -z "$QUIET" ] && printf 'tag = %q\n' "$T" >&2
+        [ -z "$QUIET" ] && printf "${C_NOTICE}tag = %q${C_RST}\n" "$T" >&2
     else
         if [[ "$TAG_FILE" =~ ^/ ]]; then
             TG="$TAG_FILE"
@@ -92,8 +92,8 @@ got_dir() {
         else
             TG="$OUTPUT/$TAG_FILE"
         fi
-        [ -z "$QUIET" ] && printf 'tag = %q -> %s\n' "$T" "$TG" >&2
-        printf '%s\n' "$T" >"$TG"
+        [ -z "$QUIET" ] && printf "${C_NOTICE}tag = %q -> %s${C_RST}\n" "$T" "$TG" >&2
+        printf "${C_NOTICE}%s${C_RST}\n" "$T" >"$TG"
     fi
     exit 0
 }
@@ -111,10 +111,10 @@ got_repo() {
         [ -z "$QUIET" ] && "${ARGS[@]}" >&2
         [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
         if git show-ref --verify "refs/heads/$BRANCH" >/dev/null 2>/dev/null; then
-            [ -n "$VERBOSE" ] && echo "Set branch: refs/heads/$BRANCH" >&2
+            [ -n "$VERBOSE" ] && echo "${C_INFO}Set branch: refs/heads/$BRANCH${C_RST}" >&2
             SET_BR=YES
         else
-            [ -n "$VERBOSE" ] && echo "Not a valid branch: refs/heads/$BRANCH" >&2
+            [ -n "$VERBOSE" ] && echo "${C_INFO}Not a valid branch: refs/heads/$BRANCH${C_RST}" >&2
             SET_BR=
         fi
         git update-ref --stdin <ref-del
@@ -146,7 +146,7 @@ got_repo() {
     [ -n "$QUIET" ] && ARGS+=(-q)
     [ -z "$QUIET" ] && "${ARGS[@]}" >&2
     [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
-    [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+    [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
 
     if [ -n "$RAW" ] && [ -n "$NO_RECURSIVE" ]; then
         if [ -z "$SUBMODULE_MODE" ]; then
@@ -161,7 +161,7 @@ got_repo() {
         ARGS=(git -C "$GIT_WORK_TREE" submodule)
         [ -n "$QUIET" ] && ARGS+=(--quiet)
         ARGS+=(init)
-        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         [ -z "$QUIET" ] && "${ARGS[@]}" >&2
         [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     fi
@@ -186,12 +186,13 @@ got_repo() {
         if rmdir "$GIT_WORK_TREE/$PA"; then
             true
         else
-            printf 'Warning: Skipping %s because the folder is not empty\n' "$PA" >&2
+            printf "${C_WARN}Warning: Skipping %s because the folder is not empty${C_RST}\n" "$PA" >&2
             continue
         fi
         ARGS=("$0")
         [ -n "$VERBOSE" ] && ARGS+=(--verbose)
         [ -n "$QUIET" ] && ARGS+=(--quiet)
+        [ -n "$COLOR" ] && ARGS+=(--color=always) || ARGS+=(--color=never)
         [ "$PRESERVE" = X ] && ARGS+=(-x) || ARGS+=(-g)
         [ -n "$GH_USE_HTTPS" ] && ARGS+=(--https)
         [ -n "$GH_USE_SSH" ] && ARGS+=(--ssh)
@@ -226,8 +227,8 @@ got_repo() {
             done
         fi
         if [ -n "$GO" ]; then
-            [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
-            [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            [ -z "$QUIET" ] && printf "${C_WARN}+++ %s %s %s${C_RST}\n" "$PA" "$URL" "$SSHA1">&2
+            [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
             if [ -z "$PARALLEL" ]; then
                 RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
             elif [ -z "$CONFIRM" ]; then
@@ -236,11 +237,11 @@ got_repo() {
                 RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >>"$TMP_LOG" &
             fi
         else
-            [ -z "$QUIET" ] && printf '%s %s %s %s\n' '---' "$PA" "$URL" "$SSHA1">&2
+            [ -z "$QUIET" ] && printf "${C_WARN}%s %s %s %s${C_RST}\n" '---' "$PA" "$URL" "$SSHA1">&2
         fi
     done 3< <(git config --local --get-regexp 'submodule.*.url' | cut -d '.' -f 2)
 
-    [ -z "$RAW" ] && [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ] && [ -z "$QUIET" ] && printf 'Waiting for sub-processes to finish, please be patient ...' >&2
+    [ -z "$RAW" ] && [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ] && [ -z "$QUIET" ] && echo "${C_INFO}Waiting for sub-processes to finish, please be patient ...${C_RST}" >&2
     wait
     [ -z "$RAW" ] && [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ] && cat "$TMP_LOG" >&2
 
@@ -248,7 +249,7 @@ got_repo() {
         ARGS=(git -C "$GIT_WORK_TREE" submodule)
         [ -n "$QUIET" ] && ARGS+=(--quiet)
         ARGS+=(absorbgitdirs)
-        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         [ -z "$QUIET" ] && "${ARGS[@]}" >&2
         [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     fi
@@ -259,6 +260,9 @@ got_repo() {
         exit 0
     fi
 }
+
+COLOR=
+[ -t 2 ] && COLOR=YES
 
 SUBMODULE_MODE=
 QUIET=
@@ -292,6 +296,19 @@ while [ $# -gt 0 ]; do
             ;;
         -v|--verbose)
             VERBOSE=YES
+            shift
+            ;;
+        --color=never|--colour=never)
+            COLOR=
+            shift
+            ;;
+        --color=always|--colour=always)
+            COLOR=YES
+            shift
+            ;;
+        --color=auto|--colour=auto|--color|--colour)
+            COLOR=
+            [ -t 2 ] && COLOR=YES
             shift
             ;;
         -s|--ssh)
@@ -393,8 +410,25 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+if [ -n "$COLOR" ]; then
+    C_ERR=$'\e[37;41m'
+    C_WARN=$'\e[37;33m'
+    C_NOTICE=$'\e[35m'
+    C_INFO=$'\e[34m'
+    C_DBG=$'\e[36m'
+    C_RST=$'\e[0m'
+else
+    C_ERR=
+    C_WARN=
+    C_NOTICE=
+    C_INFO=
+    C_DBG=
+    C_RST=
+fi
+
 if [ -n "$PRESERVE" ] && [ -n "$TAG" ]; then
-    echo "Error: Conflict: -x|-g|--preserve-git and -t|--tag|--tag-file" >&2
+    echo "${C_ERR}Error: Conflict: -x|-g|--preserve-git and -t|--tag|--tag-file${C_RST}" >&2
     exit 1
 fi
 
@@ -402,12 +436,12 @@ if [ "${#POSITIONAL[@]}" -eq 0 ]; then
     if git rev-parse HEAD >/dev/null 2>&1; then
         SUBMODULE_MODE=YES
     else
-        echo "Error: Must specify <repo-url> (any git remote) or <user>/<repo> (GitHub)"
+        echo "${C_ERR}Error: Must specify <repo-url> (any git remote) or <user>/<repo> (GitHub)${C_RST}"
         exit 1
     fi
 else
     if [ -n "$SUBMODULE_MODE" ]; then
-        echo "Error: Too many positional arguments." >&2
+        echo "${C_ERR}Error: Too many positional arguments.${C_RST}" >&2
         exit 1
     fi
     if [ "${#POSITIONAL[@]}" -eq 1 ]; then
@@ -416,30 +450,30 @@ else
         BRANCH="${POSITIONAL[1]}"
     elif [ "${#POSITIONAL[@]}" -eq 3 ]; then
         if [ -n "$OUTPUT" ]; then
-            echo "Error: Too many positional arguments." >&2
+            echo "${C_ERR}Error: Too many positional arguments.${C_RST}" >&2
             exit 1
         fi
         BRANCH="${POSITIONAL[1]}"
         OUTPUT="${POSITIONAL[2]}"
     else
-        echo "Error: Too many positional arguments." >&2
+        echo "${C_ERR}Error: Too many positional arguments.${C_RST}" >&2
         exit 1
     fi
 fi
 
 if [ -z "$SUBMODULE_MODE" ]; then
     if [ -n "$CL_BRANCHES" ] && [ "$PRESERVE" != X ]; then
-        echo "Error: Conflict: --single-branch requires -x" >&2
+        echo "${C_ERR}Error: Conflict: --single-branch requires -x${C_RST}" >&2
         exit 1
     fi
     if [ -n "$CL_TAGS" ] && [ "$PRESERVE" != X ]; then
-        echo "Error: Conflict: --no-tags requires -x" >&2
+        echo "${C_ERR}Error: Conflict: --no-tags requires -x${C_RST}" >&2
         exit 1
     fi
 fi
 
 if [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ]; then
-    echo "Warning: With --parallel, --confirm only works for first-level submodules." >&2
+    echo "${C_WARN}Warning: With --parallel, --confirm only works for first-level submodules.${C_RST}" >&2
     PMT="Proceed? (y/n) ... "
     while true; do
         read -p "$PMT" -n 1 -r <&2
@@ -462,11 +496,11 @@ if [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ]; then
 fi
 
 if ! which git >/dev/null; then
-    echo "Error: git(1) not found" >&2
+    echo "${C_ERR}Error: git(1) not found${C_RST}" >&2
     exit 66
 fi
 
-git_new || ([ -n "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
+git_new || ([ -n "$QUIET" ] && printf "${C_WARN}Warning: You should upgrade your git (currently %s)${C_RST}\n" "$(git version)" >&2)
 
 if [ -n "$TAG" ]; then
     if [ -z "$TAG_FILE" ]; then
@@ -480,15 +514,15 @@ OCWD="$PWD"
 
 if [ -n "$SUBMODULE_MODE" ]; then
     if [ -n "$OUTPUT" ]; then
-        echo "Error: Conflict: --output cannot be used in submodule mode" >&2
+        echo "${C_ERR}Error: Conflict: --output cannot be used in submodule mode${C_RST}" >&2
         exit 1
     fi
     if [ -n "$FORCE_DIR" ]; then
-        echo "Error: Conflict: --rm-rf cannot be used in submodule mode" >&2
+        echo "${C_ERR}Error: Conflict: --rm-rf cannot be used in submodule mode${C_RST}" >&2
         exit 1
     fi
     if [ "$PRESERVE" = X ] && [ -z "$RAW" ]; then
-        [ -z "$QUIET" ] && echo "Warning: git-gets by default has -x enabled in submodule mode" >&2
+        [ -z "$QUIET" ] && echo "${C_WARN}Warning: git-gets by default has -x enabled in submodule mode${C_RST}" >&2
     fi
     [ -z "$PRESERVE" ] && PRESERVE=X
     if [ -n "$GIT_WORK_TREE" ]; then
@@ -505,16 +539,16 @@ if [ -n "$SUBMODULE_MODE" ]; then
     export GIT_DIR
 
     if [ -n "$VERBOSE" ]; then
-        printf 'RAW=%q\n' "$RAW" >&2
-        printf 'PRESERVE=%q\n' "$PRESERVE" >&2
-        printf 'TAG=%q\n' "$TAG" >&2
-        printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
-        printf 'PARALLEL=%q\n' "$PARALLEL" >&2
-        printf 'CONFIRM=%q\n' "$CONFIRM" >&2
-        printf 'NO_INIT=%q\n' "$NO_INIT" >&2
-        printf 'NO_RECURSIVE=%q\n' "$NO_RECURSIVE" >&2
-        printf 'GIT_DIR=%q\n' "$GIT_DIR" >&2
-        printf 'GIT_WORK_TREE=%q\n' "$GIT_WORK_TREE" >&2
+        printf "${C_DBG}RAW=%q${C_RST}\n" "$RAW" >&2
+        printf "${C_DBG}PRESERVE=%q${C_RST}\n" "$PRESERVE" >&2
+        printf "${C_DBG}TAG=%q${C_RST}\n" "$TAG" >&2
+        printf "${C_DBG}TAG_FILE=%q${C_RST}\n" "$TAG_FILE" >&2
+        printf "${C_DBG}PARALLEL=%q${C_RST}\n" "$PARALLEL" >&2
+        printf "${C_DBG}CONFIRM=%q${C_RST}\n" "$CONFIRM" >&2
+        printf "${C_DBG}NO_INIT=%q${C_RST}\n" "$NO_INIT" >&2
+        printf "${C_DBG}NO_RECURSIVE=%q${C_RST}\n" "$NO_RECURSIVE" >&2
+        printf "${C_DBG}GIT_DIR=%q${C_RST}\n" "$GIT_DIR" >&2
+        printf "${C_DBG}GIT_WORK_TREE=%q${C_RST}\n" "$GIT_WORK_TREE" >&2
     fi
     TMP_LOG="$(realpath "$(mktemp)")"
     finish() {
@@ -525,7 +559,7 @@ if [ -n "$SUBMODULE_MODE" ]; then
 
     cd "$GIT_WORK_TREE"
     if [ -n "$(git status --porcelain --untracked-files=no --ignore-submodules=dirty --ignored=no)" ]; then
-        echo "Error: Your stage / worktree is NOT clean. Too dangerous to proceed." >&2
+        echo "${C_ERR}Error: Your stage / worktree is NOT clean. Too dangerous to proceed.${C_RST}" >&2
         exit 1
     fi
     got_repo "$(git rev-parse HEAD)"
@@ -534,13 +568,13 @@ if [ -n "$SUBMODULE_MODE" ]; then
 fi
 
 if [ -n "$NO_INIT" ]; then
-    echo "Error: Conflict: --no-init cannot be used in regular mode, consider using git-get instead" >&2
+    echo "${C_ERR}Error: Conflict: --no-init cannot be used in regular mode, consider using git-get instead${C_RST}" >&2
     exit 1
 fi
 
 match_gh_url() {
     [[ ! "${POSITIONAL[0]}" =~ ^$1 ]] && return 1
-    [ -n "$2" ] && [ -z "$QUIET" ] && echo "Warning: $1 is an unencryped protocol" >&2
+    [ -n "$2" ] && [ -z "$QUIET" ] && echo "${C_WARN}Warning: $1 is an unencryped protocol${C_RST}" >&2
     GITHUB=REPO
     GH_REPO="${POSITIONAL[0]#${1}}"
     GH_REPO="${GH_REPO%/}"
@@ -584,15 +618,15 @@ if [ ! "$OUTPUT" = '-' ]; then
 fi
 
 if [ "$BRANCH" = "HEAD" ]; then
-    [ -n "$VERBOSE" ] && echo "Resolving HEAD..." >&2
+    [ -n "$VERBOSE" ] && echo "${C_INFO}Resolving HEAD...${C_RST}" >&2
     BRANCH="$(git ls-remote --symref "$REPO" HEAD | { grep '^ref:' || true; } | cut -d $'\t' -f 1)"
     if [ -z "$BRANCH" ]; then
-        [ -z "$QUIET" ] && echo "Weird repo HEAD non-symbolic, still proceeding" >&2
+        [ -z "$QUIET" ] && echo "${C_WARN}Warning: Weird repo HEAD non-symbolic, still proceeding${C_RST}" >&2
         BRANCH=HEAD
     else
         BRANCH="${BRANCH#ref: }"
         if [ "${BRANCH#refs/heads/}" = "${BRANCH}" ]; then
-            [ -z "$QUIET" ] && echo "Weird repo HEAD symbolic, still proceeding" >&2
+            [ -z "$QUIET" ] && echo "${C_WARN}Warning: Weird repo HEAD symbolic, still proceeding${C_RST}" >&2
         else
             BRANCH="${BRANCH#refs/heads/}"
         fi
@@ -600,20 +634,20 @@ if [ "$BRANCH" = "HEAD" ]; then
 fi
 
 if [ -n "$VERBOSE" ]; then
-    printf 'RAW=%q\n' "$RAW" >&2
-    printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
-    printf 'OUTPUT=%q\n' "$OUTPUT" >&2
-    printf 'PRESERVE=%q\n' "$PRESERVE" >&2
-    printf 'TAG=%q\n' "$TAG" >&2
-    printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
-    printf 'PARALLEL=%q\n' "$PARALLEL" >&2
-    printf 'CONFIRM=%q\n' "$CONFIRM" >&2
-    printf 'NO_RECURSIVE=%q\n' "$NO_RECURSIVE" >&2
-    printf 'GITHUB=%q\n' "$GITHUB" >&2
-    printf 'GH_REPO=%q\n' "$GH_REPO" >&2
-    printf 'REPO=%q\n' "$REPO" >&2
-    printf 'BRANCH=%q\n' "$BRANCH" >&2
-    printf 'BASENAME=%q\n' "$BASENAME" >&2
+    printf "${C_DBG}RAW=%q${C_RST}\n" "$RAW" >&2
+    printf "${C_DBG}FORCE_DIR=%q${C_RST}\n" "$FORCE_DIR" >&2
+    printf "${C_DBG}OUTPUT=%q${C_RST}\n" "$OUTPUT" >&2
+    printf "${C_DBG}PRESERVE=%q${C_RST}\n" "$PRESERVE" >&2
+    printf "${C_DBG}TAG=%q${C_RST}\n" "$TAG" >&2
+    printf "${C_DBG}TAG_FILE=%q${C_RST}\n" "$TAG_FILE" >&2
+    printf "${C_DBG}PARALLEL=%q${C_RST}\n" "$PARALLEL" >&2
+    printf "${C_DBG}CONFIRM=%q${C_RST}\n" "$CONFIRM" >&2
+    printf "${C_DBG}NO_RECURSIVE=%q${C_RST}\n" "$NO_RECURSIVE" >&2
+    printf "${C_DBG}GITHUB=%q${C_RST}\n" "$GITHUB" >&2
+    printf "${C_DBG}GH_REPO=%q${C_RST}\n" "$GH_REPO" >&2
+    printf "${C_DBG}REPO=%q${C_RST}\n" "$REPO" >&2
+    printf "${C_DBG}BRANCH=%q${C_RST}\n" "$BRANCH" >&2
+    printf "${C_DBG}BASENAME=%q${C_RST}\n" "$BASENAME" >&2
 fi
 
 WORK_DIR="$(realpath "$(mktemp -d)")"
@@ -625,7 +659,7 @@ trap finish EXIT
 cd "$WORK_DIR"
 TMP_LOG="$WORK_DIR/parallel.log"
 
-[ -n "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
+[ -n "$VERBOSE" ] && printf "${C_DBG}WORK_DIR=%q${C_RST}\n" "$WORK_DIR" >&2
 
 # 0. git 2.20+ -> shallow + [filter] -> filter
 if git_new; then
@@ -639,7 +673,7 @@ if git_new; then
         ARGS+=(--depth 1 --no-tags)
         ARGS+=(--filter blob:none)
         ARGS+=("$REPO" "$BASENAME/.git")
-        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         set +e
         if [ -z "$QUIET" ]; then
             "${ARGS[@]}" 2>&1 | tee clone.log >&2
@@ -667,15 +701,15 @@ if git_new; then
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)
         ARGS+=("$REPO" "$BASENAME/.git")
-        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         set +e
         if "${ARGS[@]}"; then
             SHA1="$(git -C "$BASENAME" rev-parse "$BRANCH")"
             if [ -n "$SHA1" ]; then
-                [ -z "$QUIET" ] && printf 'Got SHA1: %q\n' "$SHA1" >&2
+                [ -z "$QUIET" ] && printf "${C_INFO}Got SHA1: %q${C_RST}\n" "$SHA1" >&2
                 set -e
                 NSHA1="$(git --git-dir="$BASENAME/.git" rev-parse "$SHA1^{commit}")"
-                [ ! "$SHA1" = "$NSHA1" ] && printf 'Got actual SHA1: %q\n' "$NSHA1" >&2
+                [ ! "$SHA1" = "$NSHA1" ] && printf "${C_INFO}Got actual SHA1: %q${C_RST}\n" "$NSHA1" >&2
                 GIT_WORK_TREE="$(realpath "$BASENAME")"
                 GIT_DIR="$(realpath "$BASENAME/.git")"
                 export GIT_WORK_TREE
@@ -690,5 +724,5 @@ if git_new; then
     rm -rf "$BASENAME"
 fi
 
-printf 'Error: No viable method.\n' >&2
+printf "${C_ERR}Error: No viable method.${C_RST}\n" >&2
 exit 3

@@ -58,6 +58,9 @@ normalize() {
     printf '%s' "$X"
 }
 
+COLOR=
+[ -t 2 ] && COLOR=YES
+
 QUIET=
 VERBOSE=
 FORCE=
@@ -87,6 +90,19 @@ while [ $# -gt 0 ]; do
             ;;
         -v|--verbose)
             VERBOSE=YES
+            shift
+            ;;
+        --color=never|--colour=never)
+            COLOR=
+            shift
+            ;;
+        --color=always|--colour=always)
+            COLOR=YES
+            shift
+            ;;
+        --color=auto|--colour=auto|--color|--colour)
+            COLOR=
+            [ -t 2 ] && COLOR=YES
             shift
             ;;
         -s|--ssh)
@@ -175,8 +191,25 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+if [ -n "$COLOR" ]; then
+    C_ERR=$'\e[37;41m'
+    C_WARN=$'\e[37;33m'
+    C_NOTICE=$'\e[35m'
+    C_INFO=$'\e[34m'
+    C_DBG=$'\e[36m'
+    C_RST=$'\e[0m'
+else
+    C_ERR=
+    C_WARN=
+    C_NOTICE=
+    C_INFO=
+    C_DBG=
+    C_RST=
+fi
+
 if [ -n "$PRESERVE" ] && [ -n "$TAG" ]; then
-    echo "Error: Conflict: -x|-g|--preserve-git and -t|--tag|--tag-file" >&2
+    echo "${C_ERR}Error: Conflict: -x|-g|--preserve-git and -t|--tag|--tag-file${C_RST}" >&2
     exit 1
 fi
 if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
@@ -184,32 +217,32 @@ if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
     exit 1
 fi
 if [ -n "$GH_USE_HTTPS" ] && [ -n "$GH_USE_SSH" ]; then
-    echo "Error: Conflict: GH_USE_HTTPS and GH_USE_SSH" >&2
+    echo "${C_ERR}Error: Conflict: GH_USE_HTTPS and GH_USE_SSH${C_RST}" >&2
     exit 1
 fi
 if [ -n "$CL_BRANCHES" ] && [ "$PRESERVE" != X ]; then
-    echo "Error: Conflict: --single-branch requires -x" >&2
+    echo "${C_ERR}Error: Conflict: --single-branch requires -x${C_RST}" >&2
     exit 1
 fi
 if [ -n "$CL_TAGS" ] && [ "$PRESERVE" != X ]; then
-    echo "Error: Conflict: --no-tags requires -x" >&2
+    echo "${C_ERR}Error: Conflict: --no-tags requires -x${C_RST}" >&2
     exit 1
 fi
 
 if [ "$#" -gt 0 ]; then
-    echo "Error: Only one path allowed!" >&2
+    echo "${C_ERR}Error: Only one path allowed!${C_RST}" >&2
     exit 1
 fi
 
 if [ "${#POSITIONAL[@]}" -eq 0 ]; then
-    echo "Error: Must specify <url> or <user>/<repo> (GitHub)"
+    echo "${C_ERR}Error: Must specify <url> or <user>/<repo> (GitHub)${C_RST}"
     exit 1
 elif [ "${#POSITIONAL[@]}" -eq 1 ]; then
     BRANCH="HEAD"
 elif [ "${#POSITIONAL[@]}" -eq 2 ]; then
     BRANCH="${POSITIONAL[1]}"
 else
-    echo "Error: Too many positional arguments, maybe you forgot -- before <path>?" >&2
+    echo "${C_ERR}Error: Too many positional arguments, maybe you forgot -- before <path>?${C_RST}" >&2
     exit 1
 fi
 
@@ -220,7 +253,7 @@ resolve_gh_url() {
         GH_REPO="${1%.git}"
     elif grep -qE '^[^/]+/[^/]+/commit/[0-9a-f]{4,40}$' <<<"$1"; then
         if [ "${#POSITIONAL[@]}" -ne 1 ]; then
-            echo "Error: Commit is already specified in the URL" >&2
+            echo "${C_ERR}Error: Commit is already specified in the URL${C_RST}" >&2
             exit 1
         fi
         GH_REPO="$(grep -Eo '^[^/]+/[^/]+/commit/' <<<"$1")"
@@ -228,7 +261,7 @@ resolve_gh_url() {
         BRANCH="$(sed -E 's_^[^/]+/[^/]+/commit/__' <<<"$1")"
     elif grep -qE '^[^/]+/[^/]+/tree/' <<<"$1"; then
         if [ "${#POSITIONAL[@]}" -ne 1 ]; then
-            echo "Error: Branch is already specified in the URL" >&2
+            echo "${C_ERR}Error: Branch is already specified in the URL${C_RST}" >&2
             exit 1
         fi
         GH_REPO="$(grep -Eo '^[^/]+/[^/]+/tree/' <<<"$1")"
@@ -237,11 +270,11 @@ resolve_gh_url() {
         AMBI=VERY_MUCH
     elif grep -qE '^[^/]+/[^/]+/blob/' <<<"$1"; then
         if [ -n "$PRESERVE" ]; then
-            echo "Error: Conflict: -x|-g|--preserve-git and -- <path> (in the URL)" >&2
+            echo "${C_ERR}Error: Conflict: -x|-g|--preserve-git and -- <path> (in the URL)${C_RST}" >&2
             exit 1
         fi
         if [ "${#POSITIONAL[@]}" -ne 1 ]; then
-            echo "Error: Branch is already specified in the URL" >&2
+            echo "${C_ERR}Error: Branch is already specified in the URL${C_RST}" >&2
             exit 1
         fi
         GH_REPO="$(grep -Eo '^[^/]+/[^/]+/blob/' <<<"$1")"
@@ -249,7 +282,7 @@ resolve_gh_url() {
         BRANCH="$(sed -E 's_^[^/]+/[^/]+/blob/__' <<<"$1")"
         AMBI=YES
     else
-        echo "Error: GitHub URL format not supported, only repo/tree/blob/commit will work" >&2
+        echo "${C_ERR}Error: GitHub URL format not supported, only repo/tree/blob/commit will work${C_RST}" >&2
         exit 1
     fi
 
@@ -285,7 +318,7 @@ resolve_gist_url() {
         GH_REPO="${GH_REPO#*/}"
     fi
     if [[ "$GH_REPO" =~ / ]]; then
-        echo "Error: GitHub Gist URL format not supported" >&2
+        echo "${C_ERR}Error: GitHub Gist URL format not supported${C_RST}" >&2
         exit 1
     fi
 
@@ -298,7 +331,7 @@ resolve_gist_url() {
 
 match_gh_url() {
     [[ ! "${POSITIONAL[0]}" =~ ^$1 ]] && return 1
-    [ -n "$2" ] && [ -z "$QUIET" ] && echo "Warning: $1 is an unencryped protocol" >&2
+    [ -n "$2" ] && [ -z "$QUIET" ] && echo "${C_WARN}Warning: $1 is an unencryped protocol${C_RST}" >&2
     if [ -n "$3" ]; then
         "$3" "${POSITIONAL[0]#${1}}" YES
     else
@@ -318,7 +351,7 @@ match_gh_url() {
 
 match_gist_url() {
     [[ ! "${POSITIONAL[0]}" =~ ^$1 ]] && return 1
-    [ -n "$2" ] && [ -z "$QUIET" ] && echo "Warning: $1 is an unencryped protocol" >&2
+    [ -n "$2" ] && [ -z "$QUIET" ] && echo "${C_WARN}Warning: $1 is an unencryped protocol${C_RST}" >&2
     if [ -n "$3" ]; then
         "$3" "${POSITIONAL[0]#${1}}"
     else
@@ -355,7 +388,7 @@ match_gh_url "https://github.com/" '' resolve_gh_url ||
     fi
 
 if [ -n "$PRESERVE" ] && [ -n "$DIR" ]; then
-    echo "Error: Can't use an URL (of a folder or file) with -x|-g|--preserve-git" >&2
+    echo "${C_ERR}Error: Can't use an URL (of a folder or file) with -x|-g|--preserve-git${C_RST}" >&2
     exit 1
 fi
 
@@ -385,22 +418,22 @@ else
 fi
 
 if ! which git >/dev/null; then
-    echo "Error: git(1) not found"
+    echo "${C_ERR}Error: git(1) not found${C_RST}"
     exit 66
 fi
 
-git_new || ([ -n "$QUIET" ] && printf 'Warning: You should upgrade your git (currently %s)\n' "$(git version)" >&2)
+git_new || ([ -n "$QUIET" ] && printf "${C_WARN}Warning: You should upgrade your git (currently %s)${C_RST}\n" "$(git version)" >&2)
 
 if [ "$BRANCH" = "HEAD" ]; then
-    [ -n "$VERBOSE" ] && echo "Resolving HEAD..." >&2
+    [ -n "$VERBOSE" ] && echo "${C_INFO}Resolving HEAD...${C_RST}" >&2
     BRANCH="$(git ls-remote --symref "$REPO" HEAD | { grep '^ref:' || true; } | cut -d $'\t' -f 1)"
     if [ -z "$BRANCH" ]; then
-        [ -z "$QUIET" ] && echo "Weird repo HEAD non-symbolic, still proceeding" >&2
+        [ -z "$QUIET" ] && echo "${C_WARN}Warning: Weird repo HEAD non-symbolic, still proceeding${C_RST}" >&2
         BRANCH=HEAD
     else
         BRANCH="${BRANCH#ref: }"
         if [ "${BRANCH#refs/heads/}" = "${BRANCH}" ]; then
-            [ -z "$QUIET" ] && echo "Weird repo HEAD symbolic, still proceeding" >&2
+            [ -z "$QUIET" ] && echo "${C_WARN}Warning: Weird repo HEAD symbolic, still proceeding${C_RST}" >&2
         else
             BRANCH="${BRANCH#refs/heads/}"
         fi
@@ -411,21 +444,21 @@ if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
 if [ -n "$VERBOSE" ]; then
-    printf 'OCWD=%q\n' "$OCWD" >&2
-    printf 'FORCE=%q\n' "$FORCE" >&2
-    printf 'FORCE_DIR=%q\n' "$FORCE_DIR" >&2
-    printf 'OUTPUT=%q\n' "$OUTPUT" >&2
-    printf 'DEF_OUTPUT=%q\n' "$DEF_OUTPUT" >&2
-    printf 'PRESERVE=%q\n' "$PRESERVE" >&2
-    printf 'TAG=%q\n' "$TAG" >&2
-    printf 'TAG_FILE=%q\n' "$TAG_FILE" >&2
-    printf 'GITHUB=%q\n' "$GITHUB" >&2
-    printf 'GH_REPO=%q\n' "$GH_REPO" >&2
-    printf 'REPO=%q\n' "$REPO" >&2
-    printf 'BRANCH=%q\n' "$BRANCH" >&2
-    printf 'DIR=%q\n' "$DIR" >&2
-    printf 'BASENAME=%q\n' "$BASENAME" >&2
-    printf 'PREV_TAGS=%q\n' "$PREV_TAGS" >&2
+    printf "${C_DBG}OCWD=%q${C_RST}\n" "$OCWD" >&2
+    printf "${C_DBG}FORCE=%q${C_RST}\n" "$FORCE" >&2
+    printf "${C_DBG}FORCE_DIR=%q${C_RST}\n" "$FORCE_DIR" >&2
+    printf "${C_DBG}OUTPUT=%q${C_RST}\n" "$OUTPUT" >&2
+    printf "${C_DBG}DEF_OUTPUT=%q${C_RST}\n" "$DEF_OUTPUT" >&2
+    printf "${C_DBG}PRESERVE=%q${C_RST}\n" "$PRESERVE" >&2
+    printf "${C_DBG}TAG=%q${C_RST}\n" "$TAG" >&2
+    printf "${C_DBG}TAG_FILE=%q${C_RST}\n" "$TAG_FILE" >&2
+    printf "${C_DBG}GITHUB=%q${C_RST}\n" "$GITHUB" >&2
+    printf "${C_DBG}GH_REPO=%q${C_RST}\n" "$GH_REPO" >&2
+    printf "${C_DBG}REPO=%q${C_RST}\n" "$REPO" >&2
+    printf "${C_DBG}BRANCH=%q${C_RST}\n" "$BRANCH" >&2
+    printf "${C_DBG}DIR=%q${C_RST}\n" "$DIR" >&2
+    printf "${C_DBG}BASENAME=%q${C_RST}\n" "$BASENAME" >&2
+    printf "${C_DBG}PREV_TAGS=%q${C_RST}\n" "$PREV_TAGS" >&2
 fi
 
 WORK_DIR="$(realpath "$(mktemp -d)")"
@@ -436,7 +469,7 @@ finish() {
 trap finish EXIT
 cd "$WORK_DIR"
 
-[ -n "$VERBOSE" ] && printf 'WORK_DIR=%q\n' "$WORK_DIR" >&2
+[ -n "$VERBOSE" ] && printf "${C_DBG}WORK_DIR=%q${C_RST}\n" "$WORK_DIR" >&2
 
 got_file() {
     set -e
@@ -448,41 +481,41 @@ got_file() {
         fi
     elif [ -f "$OUTPUT" ]; then
         if [ -n "$FORCE" ]; then
-            [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
+            [ -z "$QUIET" ] && printf "${C_WARN}Warning: Overriding file %q${C_RST}\n" "$OUTPUT" >&2
             mv -f "$1" "$OUTPUT"
         else
-            printf 'Error: File %q exists\n' "$OUTPUT" >&2
+            printf "${C_ERR}Error: File %q exists${C_RST}\n" "$OUTPUT" >&2
             exit 1
         fi
     elif [ -d "$OUTPUT" ]; then
         if [ -n "$DEF_OUTPUT" ]; then
-            printf 'Error: There is a directory %q\n' "$OUTPUT" >&2
+            printf "${C_ERR}Error: There is a directory %q${C_RST}\n" "$OUTPUT" >&2
             exit 1
         else
             mv "$1" "$OUTPUT"
         fi
     elif [ -e "$OUTPUT" ]; then
-        printf 'Error: Weird file %q exists\n' "$OUTPUT" >&2
+        printf "${C_ERR}Error: Weird file %q exists${C_RST}\n" "$OUTPUT" >&2
         exit 1
     else
         mv "$1" "$OUTPUT"
     fi
-    [ -n "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
+    [ -n "$VERBOSE" ] && printf "${C_DBG}size used in /tmp = %s${C_RST}\n" "$(du -sh "$WORK_DIR")" >&2
     if [ -z "$PREV_TAGS" ]; then
         T="$2"
     else
         T="$(printf '%s\n%s' "$PREV_TAGS" "$2")"
     fi
     if [ -z "$TAG" ]; then
-        [ -z "$QUIET" ] && printf 'tag = %q\n' "$T" >&2
+        [ -z "$QUIET" ] && printf "${C_NOTICE}tag = %q${C_RST}\n" "$T" >&2
     else
         if [[ "$TAG_FILE" =~ ^/ ]]; then
             TG="$TAG_FILE"
         else
             TG="$OCWD/$TAG_FILE"
         fi
-        [ -z "$QUIET" ] && printf 'tag = %q -> %s\n' "$T" "$TG" >&2
-        printf '%s\n' "$T" >"$TG"
+        [ -z "$QUIET" ] && printf "${C_NOTICE}tag = %q -> %s${C_RST}\n" "$T" "$TG" >&2
+        printf "${C_NOTICE}%s${C_RST}\n" "$T" >"$TG"
     fi
     exit 0
 }
@@ -494,34 +527,34 @@ got_dir() {
         (cd "$(dirname "$1")" && tar c "$(basename "$1")")
     elif [ -d "$OUTPUT" ]; then
         if [ -n "$FORCE_DIR" ]; then
-            [ -z "$QUIET" ] && printf 'Warning: Overriding directory %q\n' "$OUTPUT" >&2
+            [ -z "$QUIET" ] && printf "${C_WARN}Warning: Overriding directory %q${C_RST}\n" "$OUTPUT" >&2
             rm -rf "$OUTPUT" && mv "$1" "$OUTPUT"
         else
-            printf 'Error: Directory %q exists\n' "$OUTPUT" >&2
+            printf "${C_ERR}Error: Directory %q exists${C_RST}\n" "$OUTPUT" >&2
             exit 1
         fi
     elif [ -f "$OUTPUT" ]; then
         if [ -n "$FORCE" ]; then
-            [ -z "$QUIET" ] && printf 'Warning: Overriding file %q\n' "$OUTPUT" >&2
+            [ -z "$QUIET" ] && printf "${C_WARN}Warning: Overriding file %q${C_RST}\n" "$OUTPUT" >&2
             rm -f "$OUTPUT" && mv "$1" "$OUTPUT"
         else
-            printf 'Error: File %q exists\n' "$OUTPUT" >&2
+            printf "${C_ERR}Error: File %q exists${C_RST}\n" "$OUTPUT" >&2
             exit 1
         fi
     elif [ -e "$OUTPUT" ]; then
-        printf 'Error: Weird file %q exists\n' "$OUTPUT" >&2
+        printf "${C_ERR}Error: Weird file %q exists${C_RST}\n" "$OUTPUT" >&2
         exit 1
     else
         mv "$1" "$OUTPUT"
     fi
-    [ -n "$VERBOSE" ] && printf 'size used in /tmp = %s\n' "$(du -sh "$WORK_DIR")" >&2
+    [ -n "$VERBOSE" ] && printf "${C_DBG}size used in /tmp = %s${C_RST}\n" "$(du -sh "$WORK_DIR")" >&2
     if [ -z "$PREV_TAGS" ]; then
         T="$2"
     else
         T="$(printf '%s\n%s' "$PREV_TAGS" "$2")"
     fi
     if [ -z "$TAG" ]; then
-        [ -z "$QUIET" ] && printf 'tag = %q\n' "$T" >&2
+        [ -z "$QUIET" ] && printf "${C_NOTICE}tag = %q${C_RST}\n" "$T" >&2
     else
         if [[ "$TAG_FILE" =~ ^/ ]]; then
             TG="$TAG_FILE"
@@ -530,8 +563,8 @@ got_dir() {
         else
             TG="$OUTPUT/$TAG_FILE"
         fi
-        [ -z "$QUIET" ] && printf 'tag = %q -> %s\n' "$T" "$TG" >&2
-        printf '%s\n' "$T" >"$TG"
+        [ -z "$QUIET" ] && printf "${C_NOTICE}tag = %q -> %s${C_RST}\n" "$T" "$TG" >&2
+        printf "${C_NOTICE}%s${C_RST}\n" "$T" >"$TG"
     fi
     exit 0
 }
@@ -552,10 +585,10 @@ got_repo() {
             [ -z "$QUIET" ] && "${ARGS[@]}" >&2
             [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
             if git show-ref --verify "refs/heads/$BRANCH" >/dev/null 2>/dev/null; then
-                [ -n "$VERBOSE" ] && echo "Set branch: refs/heads/$BRANCH" >&2
+                [ -n "$VERBOSE" ] && echo "${C_INFO}Set branch: refs/heads/$BRANCH${C_RST}" >&2
                 SET_BR=YES
             else
-                [ -n "$VERBOSE" ] && echo "Not a valid branch: refs/heads/$BRANCH" >&2
+                [ -n "$VERBOSE" ] && echo "${C_INFO}Not a valid branch: refs/heads/$BRANCH${C_RST}" >&2
                 SET_BR=
             fi
             git update-ref --stdin <ref-del
@@ -585,7 +618,7 @@ got_repo() {
         unset GIT_DIR
         ARGS=(git reset --hard)
         [ -n "$QUIET" ] && ARGS+=(-q)
-        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
         [ -z "$PRESERVE" ] && mv "$1/.git" ".git"
@@ -602,21 +635,21 @@ got_repo() {
         done 3< <(git ls-tree HEAD -r | grep '^160000 commit ')
         unset GIT_DIR
         if [ -n "$P" ]; then
-            [ -n "$VERBOSE" ] && printf 'Checking %q -> %s (%q) \n' "$DIR" "commit" "$P" >&2
+            [ -n "$VERBOSE" ] && printf "${C_INFO}Checking %q -> %s (%q)${C_RST}\n" "$DIR" "commit" "$P" >&2
 
             # To support legacy git, use git checkout here
             # ARGS=(git restore --source=HEAD --staged --worktree)
             ARGS=(git checkout HEAD)
             [ -n "$QUIET" ] && ARGS+=(-q)
             ARGS+=(-- ".gitmodules" "$P")
-            [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
             [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
             [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
             ARGS=(git submodule)
             [ -n "$QUIET" ] && ARGS+=(--quiet)
             ARGS+=(init)
-            [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+            [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
             [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
             [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
@@ -624,11 +657,12 @@ got_repo() {
                 PA="$(git config --file "$1/.gitmodules" "submodule.$line.path")"
                 URL="$(git config --file "$1/.git/config" "submodule.$line.url")"
                 SSHA1="$(git --git-dir="$1/.git" ls-files -s "$PA" | cut -d ' ' -f2)"
-                [ -n "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
+                [ -n "$VERBOSE" ] && printf "${C_WARN}%s %s %s %s${C_RST}\n" "$line" "$PA" "$URL" "$SSHA1" >&2
                 [ ! "$PA" = "$P" ] && continue
                 ARGS=("$0")
                 [ -n "$VERBOSE" ] && ARGS+=(--verbose)
                 [ -n "$QUIET" ] && ARGS+=(--quiet)
+                [ -n "$COLOR" ] && ARGS+=(--color=always) || ARGS+=(--color=never)
                 [ -n "$GH_USE_HTTPS" ] && ARGS+=(--https)
                 [ -n "$GH_USE_SSH" ] && ARGS+=(--ssh)
                 [ -n "$CL_BRANCHES" ] && ARGS+=(--single-branch)
@@ -639,8 +673,8 @@ got_repo() {
                 [ -n "$FORCE_DIR" ] && ARGS+=(--force-dir)
                 [ -n "$TAG_FILE" ] && ARGS+=(--tag-file "$TAG_FILE")
                 [ ! "$P" = "$DIR" ] && ARGS+=(-- "${DIR#$P/}")
-                [ -z "$QUIET" ] && printf '+++ %s %s %s\n' "$PA" "$URL" "$SSHA1">&2
-                [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+                [ -z "$QUIET" ] && printf "${C_WARN}+++ %s %s %s${C_RST}\n" "$PA" "$URL" "$SSHA1">&2
+                [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
                 if [ -z "$PREV_TAGS" ]; then
                     PREV_TAGS="$2"
                 else
@@ -661,14 +695,14 @@ got_repo() {
         # which is caused by https://github.com/git/git/commit/95acf11a3dc3d18ec999f4913ec6c6a54545c6b7
         ARGS=(git diff-index HEAD --cached -p)
         ARGS+=(-- "$DIR")
-        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >/dev/null)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >/dev/null)
 
         ARGS=(git reset HEAD)
         [ -n "$QUIET" ] && ARGS+=(-q)
         ARGS+=(-- "$DIR")
-        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
 
@@ -677,13 +711,13 @@ got_repo() {
         ARGS=(git checkout)
         [ -n "$QUIET" ] && ARGS+=(-q)
         ARGS+=(-- "$DIR")
-        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         [ -z "$QUIET" ] && (cd "$1" && "${ARGS[@]}" >&2)
         [ -n "$QUIET" ] && (cd "$1" && "${ARGS[@]}" 2>/dev/null >&2)
         [ -f "$1/$DIR" ] && got_file "$1/$DIR" "$2"
         [ -d "$1/$DIR" ] && got_dir "$1/$DIR" "$2"
         [ -L "$1/$DIR" ] && got_file "$1/$DIR" "$2" LINK
-        echo 'Error: File type not supported.' >&2
+        echo "${C_ERR}Error: File type not supported.${C_RST}" >&2
         exit 2
     fi
 }
@@ -700,7 +734,7 @@ if git_new; then
         ARGS+=(--depth 1 --no-tags)
         [ -n "$DIR" ] && ARGS+=(--filter blob:none)
         ARGS+=("$REPO" "$BASENAME/.git")
-        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         set +e
         if "${ARGS[@]}" 2>&1 | tee clone.log >&2; then
             set -e
@@ -717,16 +751,16 @@ if git_new; then
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)
         ARGS+=("$REPO" "$BASENAME/.git")
-        [ -n "$VERBOSE" ] && (printf '%q ' "${ARGS[@]}" >&2; printf '\n'>&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         set +e
         if "${ARGS[@]}"; then
             export GIT_DIR="$BASENAME/.git"
             SHA1="$(git rev-parse "$BRANCH")"
             if [ -n "$SHA1" ]; then
-                [ -z "$QUIET" ] && printf 'Got SHA1: %q\n' "$SHA1" >&2
+                [ -z "$QUIET" ] && printf "${C_INFO}Got SHA1: %q${C_RST}\n" "$SHA1" >&2
                 set -e
                 NSHA1="$(git rev-parse "$SHA1^{commit}")"
-                [ ! "$SHA1" = "$NSHA1" ] && printf 'Got actual SHA1: %q\n' "$NSHA1" >&2
+                [ ! "$SHA1" = "$NSHA1" ] && printf "${C_INFO}Got actual SHA1: %q${C_RST}\n" "$NSHA1" >&2
                 git update-ref --no-deref HEAD "$NSHA1"
                 got_repo "$BASENAME" "$NSHA1"
             fi
@@ -736,5 +770,5 @@ if git_new; then
     rm -rf "$BASENAME"
 fi
 
-printf 'Error: No viable method.\n' >&2
+printf "${C_ERR}Error: No viable method.${C_RST}\n" >&2
 exit 3
