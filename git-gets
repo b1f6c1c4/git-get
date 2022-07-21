@@ -650,6 +650,23 @@ if [ -n "$VERBOSE" ]; then
     printf "${C_DBG}BASENAME=%q${C_RST}\n" "$BASENAME" >&2
 fi
 
+if [ "$OUTPUT" = "-" ]; then
+    true
+elif [ -d "$OUTPUT" ]; then
+    if [ -z "$FORCE_DIR" ]; then
+        printf "${C_ERR}Error: Directory %q exists${C_RST}\n" "$OUTPUT" >&2
+        exit 1
+    fi
+elif [ -f "$OUTPUT" ]; then
+    if [ -z "$FORCE" ]; then
+        printf "${C_ERR}Error: File %q exists${C_RST}\n" "$OUTPUT" >&2
+        exit 1
+    fi
+elif [ -e "$OUTPUT" ]; then
+    printf "${C_ERR}Error: Weird file %q exists${C_RST}\n" "$OUTPUT" >&2
+    exit 1
+fi
+
 WORK_DIR="$(realpath "$(mktemp -d)")"
 finish() {
     cd /

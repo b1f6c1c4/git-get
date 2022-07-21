@@ -461,6 +461,25 @@ if [ -n "$VERBOSE" ]; then
     printf "${C_DBG}PREV_TAGS=%q${C_RST}\n" "$PREV_TAGS" >&2
 fi
 
+if [ -n "$PRESERVE" ] || [ -z "$DIR" ]; then # must result in a dir
+    if [ "$OUTPUT" = "-" ]; then
+        true
+    elif [ -d "$OUTPUT" ]; then
+        if [ -z "$FORCE_DIR" ]; then
+            printf "${C_ERR}Error: Directory %q exists${C_RST}\n" "$OUTPUT" >&2
+            exit 1
+        fi
+    elif [ -f "$OUTPUT" ]; then
+        if [ -z "$FORCE" ]; then
+            printf "${C_ERR}Error: File %q exists${C_RST}\n" "$OUTPUT" >&2
+            exit 1
+        fi
+    elif [ -e "$OUTPUT" ]; then
+        printf "${C_ERR}Error: Weird file %q exists${C_RST}\n" "$OUTPUT" >&2
+        exit 1
+    fi
+fi
+
 WORK_DIR="$(realpath "$(mktemp -d)")"
 finish() {
     cd /
