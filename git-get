@@ -726,7 +726,7 @@ got_repo() {
                 [ -n "$FORCE_DIR" ] && ARGS+=(--rm-rf)
                 [ -n "$TAG_FILE" ] && ARGS+=(--tag-file "$TAG_FILE")
                 [ ! "$P" = "$DIR" ] && ARGS+=(-- "${DIR#$P/}")
-                [ -z "$QUIET" ] && printf "${C_WARN}+++ %s %s %s${C_RST}\n" "$PA" "$URL" "$SSHA1">&2
+                [ -z "$QUIET" ] && printf "${C_NOTICE}+++ %s %s %s${C_RST}\n" "$PA" "$URL" "$SSHA1">&2
                 [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
                 if [ -z "$PREV_TAGS" ]; then
                     PREV_TAGS="$2"

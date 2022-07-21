@@ -173,17 +173,17 @@ got_repo() {
     while IFS= read -r -u 3 line; do
         PA="$(git -C "$GIT_WORK_TREE" config --file ".gitmodules" "submodule.$line.path" || echo '')"
         if [ -z "$PA" ]; then
-            [ -z "$QUIET" ] && printf 'Skipping %s because it does not appear in .gitmodules\n' "$PA" >&2
+            [ -z "$QUIET" ] && printf "${C_WARN}Skipping %s because it does not appear in .gitmodules${C_RST}\n" "$PA" >&2
             continue
         fi
         URL="$(git config "submodule.$line.url")"
         if [ -z "$URL" ]; then
-            [ -z "$QUIET" ] && printf 'Skipping %s because it has not been initialized\n' "$PA" >&2
+            [ -z "$QUIET" ] && printf "${C_WARN}Skipping %s because it has not been initialized${C_RST}\n" "$PA" >&2
             continue
         fi
         SSHA1="$(git ls-files -s "$PA" | cut -d ' ' -f2)"
-        [ -n "$VERBOSE" ] && printf '%s %s %s %s\n' "$line" "$PA" "$URL" "$SSHA1">&2
-        if rmdir "$GIT_WORK_TREE/$PA"; then
+        [ -n "$VERBOSE" ] && printf "${C_INFO}%s %s %s %s${C_RST}\n" "$line" "$PA" "$URL" "$SSHA1">&2
+        if [ -n "$(find "$GIT_WORK_TREE/$PA" -maxdepth 0 -type d -empty 2>/dev/null)" ]; then
             true
         else
             [ -z "$QUIET" ] && printf "${C_WARN}Warning: Skipping %s because the folder is not empty${C_RST}\n" "$PA" >&2
@@ -204,9 +204,11 @@ got_repo() {
         ARGS+=(-o "$GIT_WORK_TREE/$PA" "$URL" "$SSHA1")
         GO=YES
         if [ -n "$CONFIRM" ]; then
-            PMT="$(printf 'Will clone %s from %s, proceed? (Y/n) ... ' "$PA" "$URL")"
             while true; do
-                read -p "$PMT" -n 1 -r
+                [ -z "$RAW" ] && printf "${C_WARN}On the toplevel:${C_RST}\n" >&2
+                [ -n "$RAW" ] && printf "${C_WARN}Inside the submodule %s:${C_RST}\n" "$RAW" >&2
+                printf "${C_WARN}Will clone %s from %s, proceed? (Y/n) ... ${C_RST}" "$PA" "$URL" >&2
+                read -n 1 -r
                 case "$REPLY" in
                     "")
                         break
@@ -227,17 +229,24 @@ got_repo() {
             done
         fi
         if [ -n "$GO" ]; then
-            [ -z "$QUIET" ] && printf "${C_WARN}+++ %s %s %s${C_RST}\n" "$PA" "$URL" "$SSHA1">&2
+            [ -z "$QUIET" ] && printf "${C_NOTICE}+++ %s %s %s${C_RST}\n" "$PA" "$URL" "$SSHA1">&2
             [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
-            if [ -z "$PARALLEL" ]; then
-                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
-            elif [ -z "$CONFIRM" ]; then
-                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2 &
+            rmdir "$GIT_WORK_TREE/$PA"
+            if [ -n "$PARALLEL" ]; then
+                if [ -n "$CONFIRM" ]; then
+                    RAW="$RAW/$PA" "${ARGS[@]}" 2>&1 | sed 's/^/    /' >>"$TMP_LOG" &
+                else
+                    RAW="$RAW/$PA" "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2 &
+                fi
             else
-                RAW=YES "${ARGS[@]}" 2>&1 | sed 's/^/    /' >>"$TMP_LOG" &
+                if [ -n "$CONFIRM" ]; then
+                    RAW="$RAW/$PA" "${ARGS[@]}"
+                else
+                    RAW="$RAW/$PA" "${ARGS[@]}" 2>&1 | sed 's/^/    /' >&2
+                fi
             fi
         else
-            [ -z "$QUIET" ] && printf "${C_WARN}%s %s %s %s${C_RST}\n" '---' "$PA" "$URL" "$SSHA1">&2
+            [ -z "$QUIET" ] && printf "${C_DBG}%s %s %s %s${C_RST}\n" '---' "$PA" "$URL" "$SSHA1">&2
         fi
     done 3< <(git config --local --get-regexp 'submodule.*.url' | cut -d '.' -f 2)
 
@@ -473,7 +482,7 @@ fi
 
 if [ -n "$PARALLEL" ] && [ -n "$CONFIRM" ]; then
     echo "${C_WARN}Warning: With --parallel, --confirm only works for first-level submodules.${C_RST}" >&2
-    PMT="Proceed? (y/n) ... "
+    PMT="${C_WARN}Proceed? (y/n) ... ${C_RST}"
     while true; do
         read -p "$PMT" -n 1 -r <&2
         case "$REPLY" in
