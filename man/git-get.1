@@ -5,9 +5,9 @@ git-get - Blazingly fast, incredibly handy git clone alternative
 .SH "SYNOPSIS"
 .sp
 .nf
-\fIgit get\fR [<options>] <url> [<branch>|<tag>|<sha1>] [-- <path>]
-\fIgit get\fR [<options>] <user>/<repo> [<branch>|<tag>|<sha1>] [-- <path>]
-\fIgit get\fR [<options>] https://github.com/<user>/<repo>/...
+\fIgit get\fR [<options>] <url> [<branch>|<tag>|<sha1>] [-- [<path>]]
+\fIgit get\fR [<options>] <user>/<repo> [<branch>|<tag>|<sha1>] [-- [<path>]]
+\fIgit get\fR [<options>] https://github.com/<user>/<repo>/... [--]
 .fi
 .sp
 .SH "DESCRIPTION"
@@ -15,6 +15,10 @@ git-get - Blazingly fast, incredibly handy git clone alternative
 git-get uses git(1) to download a single file, directory, or repo from a remote repo\&.
 Only minimium amount of data will be transferred\&.
 It doesn't take care of git submodules; use \fBgit-gets\fR(1) if you want to interact with submodules\&.
+However, if \fB<path>\fR is inside a submodule, \fBgit-get\fR(1) recursively calls itself
+to handle this situation automatically.
+.sp
+If the command line ends with a \fB--\fR, \fBgit-sparse-checkout\fR(1) will be used to reduce network and disk usage.
 .SH "OPTIONS"
 .PP
 -V, --version
