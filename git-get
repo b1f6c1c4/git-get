@@ -465,7 +465,9 @@ if [ ! "$OUTPUT" = '-' ]; then
     OUTPUT="$(fakerealpath "$OUTPUT")"
 fi
 if [ -n "$VERBOSE" ]; then
+    SHA1_SELF="$(git hash-object -t blob --no-filters "$0" || true)"
     printf "${C_DBG}GIT_GET_VERSION=%q${C_RST}\n" "$GIT_GET_VERSION" >&2
+    printf "${C_DBG}SHA1_SELF=%q${C_RST}\n" "$SHA1_SELF" >&2
     printf "${C_DBG}OCWD=%q${C_RST}\n" "$OCWD" >&2
     printf "${C_DBG}FORCE=%q${C_RST}\n" "$FORCE" >&2
     printf "${C_DBG}FORCE_DIR=%q${C_RST}\n" "$FORCE_DIR" >&2
