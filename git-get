@@ -781,8 +781,7 @@ got_repo() {
 # 0. git 2.20+ -> shallow + [filter] -> filter
 if git_new; then
     mkdir -p "$BASENAME"
-    FLAG=YES
-    if [ ! "$PRESERVE" = X ]; then
+    if [ ! "$PRESERVE" = X ] && [ -n "$(git ls-remote "$REPO" "$BRANCH")" ]; then
         ARGS=(git clone --bare)
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)
@@ -794,17 +793,15 @@ if git_new; then
         ARGS+=("$REPO" "$BASENAME/.git")
         [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
         set +e
-        if "${ARGS[@]}" 2>&1 | tee clone.log >&2; then
+        if "${ARGS[@]}"; then
             set -e
             export GIT_DIR="$(realpath "$BASENAME/.git")"
             got_repo "$BASENAME" "$(git rev-parse HEAD)"
         fi
         set -e
-        if ! grep -q 'warning: Could not find remote branch' clone.log; then
-            FLAG=
-        fi
+        [ -z "$QUIET" ] && echo "${C_WARN}Warning: Failed git clone, will attempt another method${C_RST}"
     fi
-    if [ -n "$FLAG" ]; then
+    if true; then
         ARGS=(git clone --mirror --filter tree:0)
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)
