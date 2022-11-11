@@ -1,0 +1,21 @@
+R="$(git-gets https://github.com/b1f6c1c4/git-get/tree/example-repo2)"
+
+[ -z "$R" ]
+[ ! -e git-get/.git ]
+[ ! -e git-get/sub/.git ]
+[ ! -e git-get/xsub/.git ]
+[ ! -e git-get/xsub/sub/.git ]
+[ -L git-get/link ]
+[ -L git-get/sub/link ]
+[ -L git-get/xsub/link ]
+[ -L git-get/xsub/sub/link ]
+[ -x git-get/file ]
+[ -x git-get/sub/file ]
+[ -x git-get/xsub/file ]
+[ -x git-get/xsub/sub/file ]
+[ -f git-get/dir/file-in-dir ]
+[ -f git-get/sub/dir/file-in-dir ]
+[ -f git-get/xsub/dir/file-in-dir ]
+[ -f git-get/xsub/sub/dir/file-in-dir ]
+
+rm -rf git-get

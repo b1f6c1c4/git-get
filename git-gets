@@ -646,19 +646,78 @@ if [ -n "$NO_INIT" ]; then
     exit 1
 fi
 
+resolve_gh_url() {
+    GITHUB=REPO
+    AMBI=
+    if grep -qE '^[^/]+/[^/]+$' <<<"$1"; then
+        GH_REPO="${1%.git}"
+    elif grep -qE '^[^/]+/[^/]+/commit/[0-9a-f]{4,40}$' <<<"$1"; then
+        if [ "${#POSITIONAL[@]}" -ne 1 ]; then
+            echo "${C_ERR}Error: Commit is already specified in the URL${C_RST}" >&2
+            exit 1
+        fi
+        GH_REPO="$(grep -Eo '^[^/]+/[^/]+/commit/' <<<"$1")"
+        GH_REPO="${GH_REPO%/commit/}"
+        BRANCH="$(sed -E 's_^[^/]+/[^/]+/commit/__' <<<"$1")"
+    elif grep -qE '^[^/]+/[^/]+/tree/' <<<"$1"; then
+        if [ "${#POSITIONAL[@]}" -ne 1 ]; then
+            echo "${C_ERR}Error: Branch is already specified in the URL${C_RST}" >&2
+            exit 1
+        fi
+        GH_REPO="$(grep -Eo '^[^/]+/[^/]+/tree/' <<<"$1")"
+        GH_REPO="${GH_REPO%/tree/}"
+        BRANCH="$(sed -E 's_^[^/]+/[^/]+/tree/__' <<<"$1")"
+        AMBI=VERY_MUCH
+    elif grep -qE '^[^/]+/[^/]+/blob/' <<<"$1"; then
+        if [ -n "$PRESERVE" ]; then
+            echo "${C_ERR}Error: Conflict: -x|-g|--preserve-git and -- <path> (in the URL)${C_RST}" >&2
+            exit 1
+        fi
+        if [ "${#POSITIONAL[@]}" -ne 1 ]; then
+            echo "${C_ERR}Error: Branch is already specified in the URL${C_RST}" >&2
+            exit 1
+        fi
+        GH_REPO="$(grep -Eo '^[^/]+/[^/]+/blob/' <<<"$1")"
+        GH_REPO="${GH_REPO%/blob/}"
+        BRANCH="$(sed -E 's_^[^/]+/[^/]+/blob/__' <<<"$1")"
+        AMBI=YES
+    else
+        echo "${C_ERR}Error: GitHub URL format not supported, only repo/tree/blob/commit will work${C_RST}" >&2
+        exit 1
+    fi
+
+    if [ -n "$GH_USE_HTTPS" ]; then
+        REPO="https://github.com/$GH_REPO.git"
+    else
+        REPO="git@github.com:$GH_REPO.git"
+    fi
+
+    if [ -n "$AMBI" ]; then
+        if [ -z "$(git ls-remote "$REPO" "$BRANCH")" ]; then
+            echo "${C_ERR}Error: git-gets only works on a whole repository, not a directory or file.${C_RST}" >&2
+            exit 1
+        fi
+    fi
+    unset AMBI
+}
+
 match_gh_url() {
     [[ ! "${POSITIONAL[0]}" =~ ^$1 ]] && return 1
     [ -n "$2" ] && [ -z "$QUIET" ] && echo "${C_WARN}Warning: $1 is an unencryped protocol${C_RST}" >&2
-    GITHUB=REPO
-    GH_REPO="${POSITIONAL[0]#${1}}"
-    GH_REPO="${GH_REPO%/}"
-    GH_REPO="${GH_REPO%.git}"
-    if [ -n "$GH_USE_HTTPS" ]; then
-        REPO="https://github.com/$GH_REPO.git"
-    elif [ -n "$GH_USE_SSH" ]; then
-        REPO="git@github.com:$GH_REPO.git"
+    if [ -n "$3" ]; then
+        "$3" "${POSITIONAL[0]#${1}}" YES
     else
-        REPO="$1$GH_REPO.git"
+        GITHUB=REPO
+        GH_REPO="${POSITIONAL[0]#${1}}"
+        GH_REPO="${GH_REPO%/}"
+        GH_REPO="${GH_REPO%.git}"
+        if [ -n "$GH_USE_HTTPS" ]; then
+            REPO="https://github.com/$GH_REPO.git"
+        elif [ -n "$GH_USE_SSH" ]; then
+            REPO="git@github.com:$GH_REPO.git"
+        else
+            REPO="$1$GH_REPO.git"
+        fi
     fi
 }
 
