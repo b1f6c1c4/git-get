@@ -708,6 +708,7 @@ if [ "$BRANCH" = "HEAD" ]; then
 fi
 
 if [ -n "$VERBOSE" ]; then
+    printf "${C_DBG}GIT_GET_VERSION=%q${C_RST}\n" "$GIT_GET_VERSION" >&2
     printf "${C_DBG}RAW=%q${C_RST}\n" "$RAW" >&2
     printf "${C_DBG}FORCE_DIR=%q${C_RST}\n" "$FORCE_DIR" >&2
     printf "${C_DBG}OUTPUT=%q${C_RST}\n" "$OUTPUT" >&2
