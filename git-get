@@ -251,7 +251,7 @@ if [ -n "$CL_TAGS" ] && [ "$PRESERVE" != X ]; then
     exit 1
 fi
 if [ -n "$UPSTREAM" ] && [ -z "$PRESERVE" ]; then
-    echo "${C_ERR}Error: Conflict: --upstream requires -x|-g|--preserve-git${C_RST}" >&2
+    echo "${C_ERR}Error: Conflict: --upstream requires -x${C_RST}" >&2
     exit 1
 fi
 
@@ -666,7 +666,15 @@ got_repo() {
             git config --unset remote.origin.tagOpt || true
             git config --unset remote.origin.mirror || true
             git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-            ARGS=(git fetch origin)
+            ARGS=(git fetch --multiple origin)
+            if [ -n "$UPSTREAM" ]; then
+                git config remote.upstream.url "$UPSTREAM"
+                git config remote.upstream.fetch "+refs/heads/*:refs/remotes/upstream/*"
+                git config remote.upstream.promisor true
+                git config remote.upstream.partialclonefilter tree:0
+                [ -n "$CL_TAGS" ] && git config remote.upstream.tagOpt --no-tags
+                ARGS+=(upstream)
+            fi
             [ -n "$QUIET" ] && ARGS+=(-q)
             [ -z "$QUIET" ] && "${ARGS[@]}" >&2
             [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
@@ -678,7 +686,8 @@ got_repo() {
                 SET_BR=
             fi
             git update-ref --stdin <ref-del
-            ARGS=(git fetch origin)
+            ARGS=(git fetch --multiple origin)
+            [ -n "$UPSTREAM" ] && ARGS+=(upstream)
             [ -n "$QUIET" ] && ARGS+=(-q)
             [ -z "$QUIET" ] && "${ARGS[@]}" >&2
             [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
@@ -692,9 +701,17 @@ got_repo() {
             fi
             if [ -n "$CL_BRANCHES" ]; then
                 git config --unset remote.origin.fetch || true
-                [ -n "$SET_BR" ] && git config remote.origin.fetch "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+                git config --unset remote.upstream.fetch || true
+                if [ -n "$SET_BR" ]; then
+                    git config remote.origin.fetch "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+                    [ -n "$UPSTREAM" ] && git config remote.upstream.fetch "+refs/heads/$BRANCH:refs/remotes/upstream/$BRANCH"
+                fi
                 git for-each-ref refs/remotes/origin/ --format='delete %(refname)' \
                     | sed "\|delete refs/remotes/origin/$BRANCH|d" | git update-ref --stdin
+                if [ -n "$UPSTREAM" ]; then
+                    git for-each-ref refs/remotes/upstream/ --format='delete %(refname)' \
+                        | sed "\|delete refs/remotes/upstream/$BRANCH|d" | git update-ref --stdin
+                fi
             fi
             if [ -n "$CL_TAGS" ]; then
                 git config remote.origin.tagOpt --no-tags
