@@ -130,6 +130,13 @@ You cannot use it together with \fB-x\fR nor \fB-t\fR.
 Besides, you cannot use \fB-- <path>\fR when \fB-g\fR is set.
 .RE
 .PP
+-u, --upstream
+.RS 4
+In addition to origin, add a remote reference to the cloned repository's
+upstream repository. Only possible when \fB-x\fR or \fB-g\fR is used.
+Currently only repositories from github.com are supported.
+.RE
+.PP
 -t, --tag-file=VERSION
 .RS 4
 Enable the generation of tag file by specifying \fB-t\fR\&.

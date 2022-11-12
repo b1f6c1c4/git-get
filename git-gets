@@ -351,6 +351,7 @@ PARALLEL=
 CONFIRM=
 NO_INIT=
 NO_RECURSIVE=
+UPSTREAM=
 CL_BRANCHES=
 CL_TAGS=
 POSITIONAL=()
@@ -424,6 +425,10 @@ while [ $# -gt 0 ]; do
                 exit 1
             fi
             PRESERVE=G
+            shift
+            ;;
+        -u|--upstream)
+            UPSTREAM=YES
             shift
             ;;
         -t|--tag)
@@ -542,6 +547,10 @@ if [ -z "$SUBMODULE_MODE" ]; then
     fi
     if [ -n "$CL_TAGS" ] && [ "$PRESERVE" != X ]; then
         echo "${C_ERR}Error: Conflict: --no-tags requires -x${C_RST}" >&2
+        exit 1
+    fi
+    if [ -n "$UPSTREAM" ] && [ -z "$PRESERVE" ]; then
+        echo "${C_ERR}Error: Conflict: --upstream requires -x|-g|--preserve-git${C_RST}" >&2
         exit 1
     fi
 fi
@@ -740,6 +749,33 @@ match_gh_url "https://github.com/" '' resolve_gh_url ||
         fi
     fi
 
+if [ -n "$UPSTREAM" ]; then
+    if [ "$GITHUB" != REPO ]; then
+        [ -z "$QUIET" ] && echo "${C_WARN}Warning: -u is ignored because of lack of support for $REPO.${C_RST}" >&2
+        UPSTREAM=
+    elif ! which curl >/dev/null 2>/dev/null; then
+        [ -z "$QUIET" ] && echo "${C_WARN}Warning: -u is ignored because curl(1) is not found in PATH.${C_RST}" >&2
+        UPSTREAM=
+    else
+        set +e
+        UPSTREAM="$(curl -fsL -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GH_REPO" \
+            | sed -nE '/^    "full_name": /{
+                s/^    "full_name": "(.*)",$/\1/
+                p
+                q
+            }')"
+        set -e
+        if [ -z "$UPSTREAM" ]; then
+            [ -z "$QUIET" ] && echo "${C_WARN}Warning: Failed to obtain the upstream of $REPO, maybe it's not a fork.${C_RST}" >&2
+        elif [ "$UPSTREAM" = "$GH_REPO" ]; then
+            [ -z "$QUIET" ] && echo "${C_WARN}Warning: -u is ignored because it .${C_RST}" >&2
+            UPSTREAM=
+        else
+            UPSTREAM="${REPO/"$GH_REPO"/"$UPSTREAM"}"
+        fi
+    fi
+fi
+
 BASENAME="$(basename "$REPO")"
 BASENAME="${BASENAME%.git}"
 if [ -z "$OUTPUT" ]; then
@@ -782,6 +818,7 @@ if [ -n "$VERBOSE" ]; then
     printf "${C_DBG}GITHUB=%q${C_RST}\n" "$GITHUB" >&2
     printf "${C_DBG}GH_REPO=%q${C_RST}\n" "$GH_REPO" >&2
     printf "${C_DBG}REPO=%q${C_RST}\n" "$REPO" >&2
+    printf "${C_DBG}UPSTREAM=%q${C_RST}\n" "$UPSTREAM" >&2
     printf "${C_DBG}BRANCH=%q${C_RST}\n" "$BRANCH" >&2
     printf "${C_DBG}BASENAME=%q${C_RST}\n" "$BASENAME" >&2
 fi

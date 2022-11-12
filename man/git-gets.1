@@ -126,6 +126,13 @@ See the discussion of \fB-x\fR to see the difference.
 You cannot use it together with \fB-x\fR nor \fB-t\fR.
 .RE
 .PP
+-u, --upstream
+.RS 4
+In addition to origin, add a remote reference to the cloned repository's
+upstream repository. Only possible when \fB-x\fR or \fB-g\fR is used.
+Currently only repositories from github.com are supported.
+.RE
+.PP
 -t, --tag-file=VERSION
 .RS 4
 These options are only valid in form \fB(1)\fR.

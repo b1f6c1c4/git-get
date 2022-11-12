@@ -281,6 +281,7 @@ In fact, git is so smart that, as long as `git-get` is in `PATH`, `git <xyz>` wi
         ```bash
         choco install grep sed
         ```
+* (optional) `curl` for `-u|--upstream` functionality
 
 ## License
 
