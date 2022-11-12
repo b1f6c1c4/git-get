@@ -93,7 +93,7 @@ got_dir() {
             TG="$OUTPUT/$TAG_FILE"
         fi
         [ -z "$QUIET" ] && printf "${C_NOTICE}tag = %q -> %s${C_RST}\n" "$T" "$TG" >&2
-        printf "${C_NOTICE}%s${C_RST}\n" "$T" >"$TG"
+        printf "%s\n" "$T" >"$TG"
     fi
     exit 0
 }
