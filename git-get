@@ -601,7 +601,11 @@ got_file() {
             TG="$OCWD/$TAG_FILE"
         fi
         [ -z "$QUIET" ] && printf "${C_NOTICE}tag = %q -> %s${C_RST}\n" "$T" "$TG" >&2
-        printf "%s\n" "$T" >"$TG"
+        if [ -e "$TG" ]; then
+            printf "${C_ERR}Error: Unable to create tag file %s because it exists; git-get continues.${C_RST}" "$TG" >&2
+        else
+            printf "%s\n" "$T" >"$TG"
+        fi
     fi
     exit 0
 }
