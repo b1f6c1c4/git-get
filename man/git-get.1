@@ -12,34 +12,46 @@ git-get - Blazingly fast, incredibly handy git clone alternative
 .sp
 .SH "DESCRIPTION"
 .sp
-git-get uses git(1) to download a single file, directory, or repo from a remote repo\&.
-Only minimium amount of data will be transferred\&.
-It doesn't take care of git submodules; use \fBgit-gets\fR(1) if you want to interact with submodules\&.
+git-get uses git(1) to download a single file, directory, or repo from a remote repo.
+Only minimium amount of data will be transferred.
+It doesn't take care of git submodules; use \fBgit-gets\fR(1) if you want to interact with submodules.
 However, if \fB<path>\fR is inside a submodule, \fBgit-get\fR(1) recursively calls itself
 to handle this situation automatically.
 .sp
 If the command line ends with a \fB--\fR, \fBgit-sparse-checkout\fR(1) will be used to reduce network and disk usage.
 .SH "OPTIONS"
 .PP
+-X
+.RS 4
+Our recommended settings for keeping the repo, equivalent to \fB-xuBT\fR.
+This might change in the future.
+.RE
+.PP
+-Y
+.RS 4
+Our recommended settings for compiling the repo, equivalent to \fB-t\fR.
+This might change in the future.
+.RE
+.PP
 -V, --version
 .RS 4
-Show \fBgit-get\fR(1) version\&.
+Show \fBgit-get\fR(1) version.
 .RE
 .PP
 -h, --help
 .RS 4
-Show documentation\&.
+Show documentation.
 .RE
 .PP
 -v, --verbose
 .RS 4
-Show intermediate steps\&.
+Show intermediate steps.
 .RE
 .PP
 -q, --quiet
 .RS 4
 Hide every intermediate information but errors.
-This will suppress \fBgit-clone\fR(1) progress report\&.
+This will suppress \fBgit-clone\fR(1) progress report.
 .RE
 .PP
 --color[=WHEN], --colour[=WHEN]
@@ -61,21 +73,21 @@ Note that any access to non-GitHub remote repository is NOT affected.
 .PP
 -o <target>, --output=<target>
 .RS 4
-Put the downloaded file or directory to <target>\&.
-See \fB-f\fR and \fB-F\fR options for overwrite policies\&.
+Put the downloaded file or directory to <target>.
+See \fB-f\fR and \fB-F\fR options for overwrite policies.
 .RE
 .PP
 -f, --force, -F, --rm-rf
 .RS 4
-\fB-f\fR is synonymous with \fB--force\fR\&.
-\fB-F\fR is synonymous with \fB--rm-rm\fR\&.
+\fB-f\fR is synonymous with \fB--force\fR.
+\fB-F\fR is synonymous with \fB--rm-rf\fR.
 If you downloaded a file/directory and <target> is an existing file,
 you may override the file with \fB-f\fR.
 If you downloaded a file and <target> is an existing directory,
-the file is put into the directory\&.
+the file is put into the directory.
 If you downloaded a directory and <target> is an existing directory,
-you may override the directory with \fB-F\fR\&.
-In no case will a directory be put into an existing directory\&.
+you may override the directory with \fB-F\fR.
+In no case will a directory be put into an existing directory.
 .RE
 .PP
 -x
@@ -139,11 +151,11 @@ Currently only repositories from github.com are supported.
 .PP
 -t, --tag-file=VERSION
 .RS 4
-Enable the generation of tag file by specifying \fB-t\fR\&.
-Rename and relocate the tag file by specifying \fB--tag-file\fR (which implies \fB-t\fR\&.)
-Tag file is a file, usually named VERSION, that is put along side with your downloaded file or inside your downloaded directory\&.
-It records the SHA-1 of the commit you downloaded it from\&.
-Without this file and without \fB.git\fR repo, others will lose track of where the code came from\&.
+Enable the generation of tag file by specifying \fB-t\fR.
+Rename and relocate the tag file by specifying \fB--tag-file\fR (which implies \fB-t\fR.)
+Tag file is a file, usually named VERSION, that is put along side with your downloaded file or inside your downloaded directory.
+It records the SHA-1 of the commit you downloaded it from.
+Without this file and without \fB.git\fR repo, others will lose track of where the code came from.
 You cannot use it together with \fB-x\fR nor \fB-g\fR.
 .RE
 .SH "EXAMPLES"
@@ -237,7 +249,7 @@ You \fBcannot\fR do -x and -t at the same time:
 GH_USE_HTTPS
 .RS 4
 When called in the minimalistic <user>/<repo> form,
-clone from https://github.com instead of git@github.com\&.
+clone from https://github.com instead of git@github.com.
 Helpful if there isn't an SSH key.
 .RE
 .SH "SEE ALSO"

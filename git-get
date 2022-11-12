@@ -77,6 +77,14 @@ CL_TAGS=
 POSITIONAL=()
 while [ $# -gt 0 ]; do
     case "$1" in
+        -X)
+            shift
+            set -- -x -u -B -T "$@"
+            ;;
+        -Y)
+            shift
+            set -- -t "$@"
+            ;;
         -V|--version)
             echo "git-get(1) $GIT_GET_VERSION"
             exit

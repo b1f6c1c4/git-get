@@ -12,31 +12,43 @@ git-gets - Blazingly fast git clone alternative with submodules support
 .sp
 .SH "DESCRIPTION"
 .sp
-git-gets uses git(1) to \fB(1)\fR download a repo and its submodules from a remote repo\&;
+git-gets uses git(1) to \fB(1)\fR download a repo and its submodules from a remote repog;
 or \fB(2)\fR download submodules of an existing repo.
-Only minimium amount of data will be transferred\&.
+Only minimium amount of data will be transferred.
 It cannot restrict itself to a single file or directory; use \fBgit-get\fR(1) if you only need a part of a repo.
 .SH "OPTIONS"
 .PP
+-X
+.RS 4
+Our recommended settings for keeping the repo, equivalent to \fB-xuBTP\fR.
+This might change in the future.
+.RE
+.PP
+-Y
+.RS 4
+Our recommended settings for compiling the repo, equivalent to \fB-tP\fR.
+This might change in the future.
+.RE
+.PP
 -V, --version
 .RS 4
-Show \fBgit-get\fR(1) version\&.
+Show \fBgit-get\fR(1) version.
 .RE
 .PP
 -h, --help
 .RS 4
-Show documentation\&.
+Show documentation.
 .RE
 .PP
 -v, --verbose
 .RS 4
-Show intermediate steps\&.
+Show intermediate steps.
 .RE
 .PP
 -q, --quiet
 .RS 4
 Hide every intermediate information but errors.
-This will suppress \fBgit-clone\fR(1) progress report\&.
+This will suppress \fBgit-clone\fR(1) progress report.
 .RE
 .PP
 --color[=WHEN], --colour[=WHEN]
@@ -58,22 +70,22 @@ Note that any access to non-GitHub remote repository is NOT affected.
 .PP
 --no-recursive
 .RS 4
-Only the top-level submodules will be downloaded, don't recurse down\&.
+Only the top-level submodules will be downloaded, don't recurse down.
 .RE
 .PP
 -o <target>, --output=<target>
 .RS 4
-Put the downloaded file or directory to <target>\&.
-See \fB-F\fR options for overwrite policies\&.
-Only valid in form \fB(1)\fR\&.
+Put the downloaded file or directory to <target>.
+See \fB-F\fR options for overwrite policies.
+Only valid in form \fB(1)\fR.
 .RE
 .PP
 -F, --rm-rf
 .RS 4
 If <target> is an existing directory,
-you may override the directory with \fB-F\fR\&.
-Otherwise \fBgit-gets\fR(1) will fail\&.
-Only valid in form \fB(1)\fR\&.
+you may override the directory with \fB-F\fR.
+Otherwise \fBgit-gets\fR(1) will fail.
+Only valid in form \fB(1)\fR.
 .RE
 .PP
 -x
@@ -82,7 +94,7 @@ Preserve and enhance the \fB.git\fR directory to
 make the downloaded repository look as similar as one
 created by an ordinary \fBgit clone\fR at the cost of a little bit
 more network bandwidth and disk space.
-This option is only usable in form \fB(1)\fR\&.
+This option is only usable in form \fB(1)\fR.
 You cannot use it together with \fB-g\fR nor \fB-t\fR.
 Specifically, using \fB-x\fR has the following effects:
 .IP \[bu] 2
@@ -136,11 +148,11 @@ Currently only repositories from github.com are supported.
 -t, --tag-file=VERSION
 .RS 4
 These options are only valid in form \fB(1)\fR.
-Enable the generation of tag file by specifying \fB-t\fR\&.
-Rename and relocate the tag file by specifying \fB--tag-file\fR (which implies \fB-t\fR\&.)
-Tag file is a file, usually named VERSION, that is put along side with your downloaded file or inside your downloaded directory\&.
-It records the SHA-1 of the commit you downloaded it from\&.
-Without this file and without \fB.git\fR repo, others will lose track of where the code came from\&.
+Enable the generation of tag file by specifying \fB-t\fR.
+Rename and relocate the tag file by specifying \fB--tag-file\fR (which implies \fB-t\fR.)
+Tag file is a file, usually named VERSION, that is put along side with your downloaded file or inside your downloaded directory.
+It records the SHA-1 of the commit you downloaded it from.
+Without this file and without \fB.git\fR repo, others will lose track of where the code came from.
 You cannot use it together with \fB-g\fR.
 .RE
 .PP
@@ -151,14 +163,14 @@ Launch multiple instances of \fBgit-clone\fR(1) to speed things up.
 .PP
 -c, --confirm
 .RS 4
-Prompt the user before downloading a submodule\&.
+Prompt the user before downloading a submodule.
 .RE
 .PP
 --no-init
 .RS 4
-Do not call \fBgit-submodule init\fR so that only the submodules that have already been inited will be downloaded\&.
-All second-level submodules will, however, still be inited and downloaded unless you specified \fB--no-recursive\fR\&.
-Only valid in form \fB(2)\fR\&.
+Do not call \fBgit-submodule init\fR so that only the submodules that have already been inited will be downloaded.
+All second-level submodules will, however, still be inited and downloaded unless you specified \fB--no-recursive\fR.
+Only valid in form \fB(2)\fR.
 .RE
 .SH "EXAMPLES"
 .PP
@@ -204,7 +216,7 @@ $ git gets --no-init    # Only those with 'git submodule init ...'
 GH_USE_HTTPS
 .RS 4
 When called in the minimalistic <user>/<repo> form,
-clone from https://github.com instead of git@github.com\&.
+clone from https://github.com instead of git@github.com.
 Helpful if there isn't an SSH key.
 .RE
 .SH "SEE ALSO"
