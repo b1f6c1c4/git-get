@@ -708,6 +708,7 @@ got_repo() {
             fi
             config_remotes tagOpt "$([ -n "$CL_TAGS" ] && echo '--no-tags')"
             [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' git update-ref --stdin; printf "${C_RST}\n") >&2
+            git for-each-ref refs/remotes/ --format='delete %(refname)' | git update-ref --stdin
             git for-each-ref --format='%(refname)' | \
                 while IFS= read -r line; do
                     if [ "$line" = "refs/heads/$BRANCH" ]; then
@@ -732,7 +733,7 @@ got_repo() {
                 git symbolic-ref HEAD "refs/heads/$BRANCH"
             fi
             if [ -n "$UPSTREAM" ]; then
-                ARGS=(git fetch --prune upstream)
+                ARGS=(git fetch upstream)
                 [ -n "$QUIET" ] && ARGS+=(-q)
                 [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
                 [ -z "$QUIET" ] && "${ARGS[@]}" >&2
