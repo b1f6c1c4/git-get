@@ -120,6 +120,7 @@ got_repo() {
             ARGS+=(upstream)
         fi
         [ -n "$QUIET" ] && ARGS+=(-q)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
         [ -z "$QUIET" ] && "${ARGS[@]}" >&2
         [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
         if git show-ref --verify "refs/heads/$BRANCH" >/dev/null 2>/dev/null; then
@@ -133,12 +134,14 @@ got_repo() {
         ARGS=(git fetch --multiple origin)
         [ -n "$UPSTREAM" ] && ARGS+=(upstream)
         [ -n "$QUIET" ] && ARGS+=(-q)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
         [ -z "$QUIET" ] && "${ARGS[@]}" >&2
         [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
         if [ -n "$SET_BR" ]; then
             ARGS=(git branch -f "$BRANCH")
             ARGS+=("refs/remotes/origin/$BRANCH")
             [ -n "$QUIET" ] && ARGS+=(-q)
+            [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
             [ -z "$QUIET" ] && "${ARGS[@]}" >&2
             [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
             git symbolic-ref HEAD "refs/heads/$BRANCH"
@@ -165,6 +168,7 @@ got_repo() {
 
     ARGS=(git reset --hard)
     [ -n "$QUIET" ] && ARGS+=(-q)
+    [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
     [ -z "$QUIET" ] && "${ARGS[@]}" >&2
     [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
@@ -182,7 +186,7 @@ got_repo() {
         ARGS=(git -C "$GIT_WORK_TREE" submodule)
         [ -n "$QUIET" ] && ARGS+=(--quiet)
         ARGS+=(init)
-        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
         [ -z "$QUIET" ] && "${ARGS[@]}" >&2
         [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     fi
@@ -345,7 +349,7 @@ got_repo() {
         ARGS=(git -C "$GIT_WORK_TREE" submodule)
         [ -n "$QUIET" ] && ARGS+=(--quiet)
         ARGS+=(absorbgitdirs)
-        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
         [ -z "$QUIET" ] && "${ARGS[@]}" >&2
         [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
     fi
@@ -896,7 +900,7 @@ if git_new; then
         ARGS+=(--depth 1 --no-tags)
         ARGS+=(--filter blob:none)
         ARGS+=("$REPO" "$BASENAME/.git")
-        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
         set +e
         if "${ARGS[@]}"; then
             set -e
@@ -915,7 +919,7 @@ if git_new; then
         [ -n "$QUIET" ] && ARGS+=(-q)
         [ -z "$QUIET" ] && ARGS+=(--progress)
         ARGS+=("$REPO" "$BASENAME/.git")
-        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}" >&2; printf '%q ' "${ARGS[@]}" >&2; printf "${C_RST}\n">&2)
+        [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
         set +e
         if "${ARGS[@]}"; then
             SHA1="$(git -C "$BASENAME" rev-parse "$BRANCH")"
