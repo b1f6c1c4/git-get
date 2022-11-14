@@ -667,6 +667,17 @@ got_dir() {
     exit 0
 }
 
+config_remotes() {
+    if [ -z "$2" ]; then
+        git config --unset "remote.origin.$1" || true
+        [ -n "$UPSTREAM" ] && git config --unset "remote.upstream.$1" || true
+    else
+        git config "remote.origin.$1" "${2/_/origin}"
+        [ -n "$UPSTREAM" ] && git config "remote.upstream.$1" "${2/_/upstream}"
+    fi
+    true
+}
+
 got_repo() {
     set -e
     git config --bool core.bare false
@@ -674,38 +685,44 @@ got_repo() {
 
     if [ -z "$DIR" ]; then
         if [ "$PRESERVE" = X ]; then
-            git for-each-ref --format='delete %(refname)' >ref-del
-            git config --unset remote.origin.tagOpt || true
             git config --unset remote.origin.mirror || true
-            git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-            ARGS=(git fetch --multiple origin)
             if [ -n "$UPSTREAM" ]; then
                 git config remote.upstream.url "$UPSTREAM"
-                git config remote.upstream.fetch "+refs/heads/*:refs/remotes/upstream/*"
                 git config remote.upstream.promisor true
                 git config remote.upstream.partialclonefilter tree:0
-                [ -n "$CL_TAGS" ] && git config remote.upstream.tagOpt --no-tags
-                ARGS+=(upstream)
             fi
-            [ -n "$QUIET" ] && ARGS+=(-q)
-            [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
-            [ -z "$QUIET" ] && "${ARGS[@]}" >&2
-            [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
-            if git show-ref --verify "refs/heads/$BRANCH" >/dev/null 2>/dev/null; then
+            if [ -z "$CL_BRANCHES" ]; then
+                config_remotes fetch '+refs/heads/*:refs/remotes/_/*'
+            elif git show-ref --verify "refs/heads/$BRANCH" >/dev/null 2>/dev/null; then
                 [ -n "$VERBOSE" ] && echo "${C_INFO}Set branch: refs/heads/$BRANCH${C_RST}" >&2
-                SET_BR=YES
+                config_remotes fetch "+refs/heads/$BRANCH:refs/remotes/_/$BRANCH"
+                if [ -n "$UPSTREAM" ] && [ -z "$(git ls-remote "$UPSTREAM" "refs/heads/$BRANCH")" ]; then
+                    UBRANCH="$(git ls-remote --symref "$UPSTREAM" HEAD | { grep '^ref:' || true; } | cut -d $'\t' -f 1)"
+                    UBRANCH="${UBRANCH#ref: }"
+                    [ -z "$QUIET" ] && echo "${C_WARN}Warning: refs/heads/$BRANCH not found on upstream $UPSTREAM, using default $UBRANCH instead.${C_RST}" >&2
+                    git config remote.upstream.fetch "+$UBRANCH:refs/remotes/upstream/${UBRANCH#refs/heads/}"
+                fi
             else
-                [ -n "$VERBOSE" ] && echo "${C_INFO}Not a valid branch: refs/heads/$BRANCH${C_RST}" >&2
-                SET_BR=
+                [ -z "$QUIET" ] && echo "${C_WARN}Warning: $BRANCH is not a branch, so your clone will contain no branch.${C_RST}" >&2
+                config_remotes fetch ''
             fi
-            git update-ref --stdin <ref-del
-            ARGS=(git fetch --multiple origin)
-            [ -n "$UPSTREAM" ] && ARGS+=(upstream)
-            [ -n "$QUIET" ] && ARGS+=(-q)
-            [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
-            [ -z "$QUIET" ] && "${ARGS[@]}" >&2
-            [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
-            if [ -n "$SET_BR" ]; then
+            config_remotes tagOpt "$([ -n "$CL_TAGS" ] && echo '--no-tags')"
+            [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' git update-ref --stdin; printf "${C_RST}\n") >&2
+            git for-each-ref --format='%(refname)' | \
+                while IFS= read -r line; do
+                    if [ "$line" = "refs/heads/$BRANCH" ]; then
+                        echo "create refs/remotes/origin/$BRANCH" "$line"
+                    elif [[ "$line" =~ ^refs/heads/ ]]; then
+                        [ -z "$CL_BRANCHES" ] && echo create "refs/remotes/origin/${line##refs/heads/}" "$line"
+                        echo "delete $line"
+                    elif [[ "$line" =~ ^refs/tags/ ]]; then
+                        [ -n "$CL_TAGS" ] && echo "delete $line"
+                        true
+                    else
+                        echo "delete $line"
+                    fi
+                done | git update-ref --stdin
+            if git show-ref --verify "refs/remotes/origin/$BRANCH" >/dev/null 2>/dev/null; then
                 ARGS=(git branch -f "$BRANCH")
                 ARGS+=("refs/remotes/origin/$BRANCH")
                 [ -n "$QUIET" ] && ARGS+=(-q)
@@ -714,23 +731,12 @@ got_repo() {
                 [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
                 git symbolic-ref HEAD "refs/heads/$BRANCH"
             fi
-            if [ -n "$CL_BRANCHES" ]; then
-                git config --unset remote.origin.fetch || true
-                git config --unset remote.upstream.fetch || true
-                if [ -n "$SET_BR" ]; then
-                    git config remote.origin.fetch "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
-                    [ -n "$UPSTREAM" ] && git config remote.upstream.fetch "+refs/heads/$BRANCH:refs/remotes/upstream/$BRANCH"
-                fi
-                git for-each-ref refs/remotes/origin/ --format='delete %(refname)' \
-                    | sed "\|delete refs/remotes/origin/$BRANCH|d" | git update-ref --stdin
-                if [ -n "$UPSTREAM" ]; then
-                    git for-each-ref refs/remotes/upstream/ --format='delete %(refname)' \
-                        | sed "\|delete refs/remotes/upstream/$BRANCH|d" | git update-ref --stdin
-                fi
-            fi
-            if [ -n "$CL_TAGS" ]; then
-                git config remote.origin.tagOpt --no-tags
-                git for-each-ref refs/tags/ --format='delete %(refname)' | git update-ref --stdin
+            if [ -n "$UPSTREAM" ]; then
+                ARGS=(git fetch --prune upstream)
+                [ -n "$QUIET" ] && ARGS+=(-q)
+                [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
+                [ -z "$QUIET" ] && "${ARGS[@]}" >&2
+                [ -n "$QUIET" ] && "${ARGS[@]}" 2>/dev/null >&2
             fi
         fi
         unset GIT_DIR
