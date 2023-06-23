@@ -5,7 +5,26 @@ set -euo pipefail
 FILE="$(realpath "$1")"
 
 export GH_USE_HTTPS=YES
-export PATH="$(realpath "$(dirname "$0")"):$PATH"
+
+if [ "$#" -le 1 ]; then
+    export PATH="$(realpath "$(dirname "$0")"):$PATH"
+else
+    MY="$(realpath "$(dirname "$0")")"
+    OU="$(realpath "$2")"
+    rm -rf "$OU"
+    git-get() {
+        kcov \
+            --skip-solibs --collect-only \
+            "--include-path=$MY/git-get" \
+            "$OU" "$MY/git-get" --color=never "$@"
+    }
+    git-gets() {
+        kcov \
+            --skip-solibs --collect-only \
+            "--include-path=$MY/git-gets" \
+            "$OU" "$MY/git-gets" --color=never "$@"
+    }
+fi
 
 WORK_DIR="$(realpath "$(mktemp -d)")"
 finish() {
