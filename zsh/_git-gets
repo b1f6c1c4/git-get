@@ -8,6 +8,8 @@ _arguments -s -S -A "-*" \
   '(--color --colour)'{--color=,--colour=}'[Display steps in color]:when:(never always auto)' \
   '(-s --ssh -H --https)'{-s,--ssh}'[Enforce SSH protocol]' \
   '(-H --https -s --ssh)'{-H,--https}'[Enforce HTTPS protocol]' \
+  '(-X -Y -x -u --upstream -B --single-branch -T --no-tags -t --tag-file -P --parallel)-X[Optimize clone for making changes]' \
+  '(-X -Y -x -u --upstream -B --single-branch -T --no-tags -t --tag-file -P --parallel)-Y[Optimize clone for not making changes]' \
   '--no-recursive[Only top-level submodules]' \
   '(-o --output)'{-o+,--output=}'[Put the download file or directory here]:directory:_files' \
   '(-F --rm-rf)'{-F,--rm-rf}'[Override an existing folder]' \
@@ -15,6 +17,7 @@ _arguments -s -S -A "-*" \
   '(-B --single-branch)'{-B,--single-branch}'[Cleanup unnecessary branches]' \
   '(-T --no-tags)'{-T,--no-tags}'[Cleanup all tags]' \
   '(-g --preserve-git -x -t --tag-file)'{-g,--preserve-git}'[Preserve the .git directory]' \
+  '(-u --upstream)'{-u,--upstream}'[Clone upstream GitHub repo as well (if available)]' \
   '(-t --tag-file)'{-t+,--tag-file=}'[Generate a tag file (default=VERSION)]:file:_files' \
   '(-P --parallel)'{-P,--parallel}'[Launch multiple instances of git-clone]' \
   '(-c --confirm)'{-c,--confirm}'[Prompt the user before downloading]' \

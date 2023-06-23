@@ -8,10 +8,13 @@ _arguments -s -S -A "-*" \
   '(--color --colour)'{--color=,--colour=}'[Display steps in color]:when:(never always auto)' \
   '(-s --ssh -H --https)'{-s,--ssh}'[Enforce SSH protocol]' \
   '(-H --https -s --ssh)'{-H,--https}'[Enforce HTTPS protocol]' \
+  '(-X -Y -x -u --upstream -B --single-branch -T --no-tags -t --tag-file)-X[Optimize clone for making changes]' \
+  '(-X -Y -x -u --upstream -B --single-branch -T --no-tags -t --tag-file)-Y[Optimize clone for not making changes]' \
   '(-o --output)'{-o+,--output=}'[Put the download file or directory here]:directory:_files' \
   '(-f --force)'{-f,--force}'[Override an existing file]' \
-  '(-F --rm-rf)'{-F,--rm-rf}'[Override an existing folder]' \
+  '(-F --rm-rf -f --force)'{-F,--rm-rf}'[Override an existing folder]' \
   '(-g --preserve-git -t --tag-file)-x[Preserve and enhance the .git directory]' \
+  '(-u --upstream)'{-u,--upstream}'[Clone upstream GitHub repo as well (if available)]' \
   '(-B --single-branch)'{-B,--single-branch}'[Cleanup unnecessary branches]' \
   '(-T --no-tags)'{-T,--no-tags}'[Cleanup all tags]' \
   '(-g --preserve-git -x -t --tag-file)'{-g,--preserve-git}'[Preserve the .git directory]' \
