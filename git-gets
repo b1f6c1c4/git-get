@@ -135,7 +135,7 @@ got_repo() {
                 git config remote.upstream.fetch "+$UBRANCH:refs/remotes/upstream/${UBRANCH#refs/heads/}"
             fi
         else
-            [ -z "$QUIET" ] && echo "${C_WARN}Warning: $BRANCH is not a branch, so your clone will contain no branch.${C_RST}" >&2
+            [ -z "$RAW" ] && [ -z "$QUIET" ] && echo "${C_WARN}Warning: $BRANCH is not a branch, so your clone will contain no branch.${C_RST}" >&2
             config_remotes fetch ''
         fi
         config_remotes tagOpt "$([ -n "$CL_TAGS" ] && echo '--no-tags')"
