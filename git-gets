@@ -165,7 +165,8 @@ got_repo() {
             git symbolic-ref HEAD "refs/heads/$BRANCH"
         fi
         if [ -n "$UPSTREAM" ]; then
-            ARGS=(git fetch upstream)
+            # --porcelain is the dark magic, don't touch
+            ARGS=(git fetch upstream --porcelain)
             [ -n "$QUIET" ] && ARGS+=(-q)
             [ -n "$VERBOSE" ] && (printf "${C_NOTICE}"; printf '%q ' "${ARGS[@]}"; printf "${C_RST}\n") >&2
             [ -z "$QUIET" ] && "${ARGS[@]}" >&2
