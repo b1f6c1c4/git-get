@@ -9,7 +9,7 @@
     # Method 1: Paste the original URL into the terminal:
     git get https://github.com/b1f6c1c4/git-get/blob/master/README.md
     # Method 2: Of course, a full URL is acceptable:
-    git get git@github.com:b1f6c1c4/git-get -- README.md
+    git get git@github.com:b1f6c1c4/git-get.git -- README.md
     # Method 3a: Type a few words in the terminal:
     git get b1f6c1c4/git-get -- README.md
     # Method 3b: If the above doesn't work because of SSH, use HTTPS:
@@ -23,41 +23,20 @@
     # Optionally, you may want a VERSION file to record the commit SHA1:
     git get -t ...
     ```
-- Download a repo/branch/tag/commit:
+- Download a repo:
     ```bash
-    # Also the same:
-    git get https://github.com/b1f6c1c4/git-get
-    git get https://github.com/b1f6c1c4/git-get/tree/example-repo2
-    git get https://github.com/b1f6c1c4/git-get/commit/2dd50b6
-    git get b1f6c1c4/git-get
-    git get b1f6c1c4/git-get example-repo2
-    git get b1f6c1c4/git-get 2dd50b6
-    # You may wonder where did the .git go.
-    # We automatically 'rm -rf .git' for you because in 95% of the cases
-    # you won't even look at it. But if you really want your .git back:
-    git get -x ...
+    git get[s] [-X|-Y] https://github.com/b1f6c1c4/git-get
+    git get[s] [-X|-Y] https://github.com/b1f6c1c4/git-get/tree/example-repo2
+    git get[s] [-X|-Y] https://github.com/b1f6c1c4/git-get/commit/2dd50b6
+    git get[s] [-X|-Y] b1f6c1c4/git-get
+    git get[s] [-X|-Y] b1f6c1c4/git-get example-repo2
+    git get[s] [-X|-Y] b1f6c1c4/git-get 2dd50b6
     ```
-- Download a file/folder of a branch/tag/commit:
-    ```bash
-    # Combine what you've learned before:
-    git get https://github.com/b1f6c1c4/git-get/blob/example-repo2/file
-    git get https://github.com/b1f6c1c4/git-get/tree/example-repo2/dir
-    git get b1f6c1c4/git-get example-repo2 -- file
-    git get b1f6c1c4/git-get example-repo2 -- dir
-    # You *cannot* do -x and -t at the same time:
-    # git get -xt ... # Error!!!
-    ```
-- Download a repo and submodules:
-    ```bash
-    # Just a tiny tiny change:
-    git gets https://github.com/b1f6c1c4/git-get
-    git gets b1f6c1c4/git-get
-    # If you want it to be even faster:
-    git gets -P ...
-    # If you want to make changes and push back:
-    git gets -x ...
-    ```
-- You already have a repo, and you want its submodules:
+    - __`s`__ to include submodules
+    - Depending on the scenario, use __one__ of the following:
+        - __`-X`__: clone a repo and make changes
+        - __`-Y`__: download a repo to compile it
+- You already have a cloned repo, and you want its submodules:
     ```bash
     git gets              # Just give me all
     git gets -c           # Let me choose
@@ -175,22 +154,24 @@ The CLI is pretty self-explanatory:
     | https://github.com/<user>/<repo>/blob/<commitish>[/<path>]
 
 # Download a single repo (or part of):
-git-get [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https]
+git-get [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https] [-X|-Y]
     <specifier> [-o <target>] [-f|--force] [-F|--rm-rf]
     (-x [-B] [-T] | [-t|--tag] [-- <path>])
 
 # Download a repo and its submodules:
-git gets [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https]
+git gets [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https] [-X|-Y]
     [-P|--parallel] [-c|--confirm] [--no-recursive]
     <specifier> [-o <target>] [-F|--rm-rf]
     (-x [-B] [-T] | [-t|--tag])
 
 # Download submodules of an existing repo:
-git gets [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https]
+git gets [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https] [-X|-Y]
     [-P|--parallel] [-c|--confirm] [--no-recursive] [--no-init]
 ```
 
 Some comments:
+
+* `-X`=`-xuBTP` for keep repo and make changes; `-Y`=`-tP` for compiling.
 
 * `-s|--ssh` and `-H|--https`:
 Override using HTTPS or SSH when accesssing github.com and gist.github.com
