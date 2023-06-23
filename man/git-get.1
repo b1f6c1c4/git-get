@@ -19,6 +19,7 @@ However, if \fB<path>\fR is inside a submodule, \fBgit-get\fR(1) recursively cal
 to handle this situation automatically.
 .sp
 If the command line ends with a \fB--\fR, \fBgit-sparse-checkout\fR(1) will be used to reduce network and disk usage.
+You would need to manually invoke \fIgit sparse-checkout add <path>\fR to checkout the directories you want after \fBgit-get\fR.
 .SH "OPTIONS"
 .PP
 -X

@@ -2,6 +2,17 @@
 
 [![Test Status](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)](https://ci.appveyor.com/project/b1f6c1c4/git-get/branch/master)
 
+[x] Automatic shallow clone
+[x] Automatic partial clone
+[x] Single file/directory clone, even crossing submodule boundaries
+[x] Arbitrary clone given commit SHA1
+[x] Fast parallel submodules clone
+[x] Interactive submodules clone selection
+[x] Full `git sparse-checkout` support
+[x] Optional single branch/tag clone
+[x] Tag file `VERSION`
+[x] Automatic origin + upstream clone (for GitHub only)
+
 ## TL;DR
 
 - Download a file:
@@ -156,7 +167,7 @@ The CLI is pretty self-explanatory:
 # Download a single repo (or part of):
 git-get [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https] [-X|-Y]
     <specifier> [-o <target>] [-f|--force] [-F|--rm-rf]
-    (-x [-B] [-T] | [-t|--tag] [-- <path>])
+    (-x [-B] [-T] | [-t|--tag] [-- [<path>]])
 
 # Download a repo and its submodules:
 git gets [-v|--verbose|-q|--quiet] [-s|--ssh | -H|--https] [-X|-Y]
@@ -177,16 +188,13 @@ Some comments:
 Override using HTTPS or SSH when accesssing github.com and gist.github.com
 in the case when you don't have a ready-to-use SSH or HTTPS set-up,
 
-* `--no-recursive` and `--no-init`:
-The former one means that only *top-level* submodules are downloaded.
-The latter one means that you need to manually initialize *top-level* submodules.
-Both switches apply solely to top-level submodules.
-If you don't want to download any submodule, simply use `git get` instead of `git gets`.
-Finer control is feasible using `--confirm`.
-
 * `-f|--force` and `-F|--rm-rf`:
 Override existing file with `-f|--force`.
 Override existing directory with `-F|--rm-rf`.
+
+* For `git-get`, leaving an empty `--` at the end creates a
+[sparse checkout](https://git-scm.com/docs/git-sparse-checkout)
+repo, cone mode.
 
 * `-x`, `-B|--single-branch`, and `-T|--no-tags`:
 `-x` will keep the `.git` so you can make changes.
