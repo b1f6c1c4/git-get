@@ -15,13 +15,13 @@ else
     git-get() {
         kcov \
             --skip-solibs --collect-only \
-            "--include-path=$MY/git-get" \
+            "--include-path=$MY/git-get,$MY/git-gets" \
             "$OU" "$MY/git-get" --color=never "$@"
     }
     git-gets() {
         kcov \
             --skip-solibs --collect-only \
-            "--include-path=$MY/git-gets" \
+            "--include-path=$MY/git-get,$MY/git-gets" \
             "$OU" "$MY/git-gets" --color=never "$@"
     }
 fi

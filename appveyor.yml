@@ -8,12 +8,14 @@ skip_commits:
   message: /\[ci skip\]|\[skip ci\]/
 
 image:
-  - macos
-  - Visual Studio 2022
   - Ubuntu2004
+  - Visual Studio 2022
+  - macos
 
 environment:
   MAKEFLAGS: -j8
+  COVERALLS_REPO_TOKEN:
+    secure: 8t5ZKdyCWpby/hrKVV5kjvOst7QzfnaW4HKKEh7DKjmxDuwFWdkD8Oizq4Hsoe3N
 
 for:
 -
@@ -23,6 +25,16 @@ for:
 
   install:
     - choco install make
+-
+  matrix:
+    only:
+      - image: Ubuntu2004
+
+  install:
+    - sudo apt-get update || true
+    - sudo apt-get install kcov
+  build_script:
+    - make cover
 
 before_build:
   - make --version

@@ -1,6 +1,7 @@
 # `git-get`: Blazingly fast, incredibly handy `git clone`
 
-[![Test Status](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)](https://ci.appveyor.com/project/b1f6c1c4/git-get/branch/master)
+[![Appveyor](https://img.shields.io/appveyor/build/b1f6c1c4/git-get?style=flat-square)](https://ci.appveyor.com/project/b1f6c1c4/git-get/build/master)
+[![Coveralls](https://img.shields.io/coveralls/github/b1f6c1c4/git-get?style=flat-square)](https://coveralls.io/github/b1f6c1c4/git-get)
 
 [x] Automatic shallow clone
 [x] Automatic partial clone

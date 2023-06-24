@@ -7,7 +7,7 @@ test: $(REPORTS)
 cover: coverage/merged/index.html
 
 coverage/merged/index.html: $(COVERAGES)
-	kcov --merge coverage/merged $^
+	kcov --coveralls-id=$(COVERALLS_REPO_TOKEN) --merge coverage/merged $^
 
 report/%: tests/% git-get git-gets
 	mkdir -p "$$(dirname "$@")"
