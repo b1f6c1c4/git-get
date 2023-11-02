@@ -3,16 +3,16 @@
 [![Appveyor](https://img.shields.io/appveyor/build/b1f6c1c4/git-get?style=flat-square)](https://ci.appveyor.com/project/b1f6c1c4/git-get/build/master)
 [![Coveralls](https://img.shields.io/coveralls/github/b1f6c1c4/git-get?style=flat-square)](https://coveralls.io/github/b1f6c1c4/git-get)
 
-[x] Automatic shallow clone
-[x] Automatic partial clone
-[x] Single file/directory clone, even crossing submodule boundaries
-[x] Arbitrary clone given commit SHA1
-[x] Fast parallel submodules clone
-[x] Interactive submodules clone selection
-[x] Full `git sparse-checkout` support
-[x] Optional single branch/tag clone
-[x] Tag file `VERSION`
-[x] Automatic origin + upstream clone (for GitHub only)
+- [x] Automatic shallow clone
+- [x] Automatic partial clone
+- [x] Single file/directory clone, even crossing submodule boundaries
+- [x] Arbitrary clone given commit SHA1
+- [x] Fast parallel submodules clone
+- [x] Interactive submodules clone selection
+- [x] Full `git sparse-checkout` support
+- [x] Optional single branch/tag clone
+- [x] Tag file `VERSION`
+- [x] Automatic origin + upstream clone (for GitHub only)
 
 ## TL;DR
 
